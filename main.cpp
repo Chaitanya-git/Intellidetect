@@ -5,7 +5,7 @@
 int main(){
     cout<<"ANN Test Using the MNIST dataset"<<endl;
     mat X,Y;
-    mat Theta1,Theta2;
+    mat Theta1, Theta2, nn_params;
     X.load("/home/chaitanya/Downloads/MNIST-dataset-in-different-formats/data/CSV format/mnist_train.csv");
     X = shuffle(X);
     Y = X.col(0);
@@ -17,10 +17,11 @@ int main(){
     Theta2 = randInitWeights(OutputLayerSize,HiddenLayerSize+1);
 
     cout<<"Weights Initialized"<<endl;
-    mat nn_params = join_vert(vectorise(Theta1),vectorise(Theta2)); //the weights in a more manageable format
+    if(!nn_params.load("parameters.csv"))
+        nn_params = join_vert(vectorise(Theta1),vectorise(Theta2)); //the weights in a more manageable format
     //cout<<X.n_cols<<endl<<X.n_rows<<endl;
 
-    double lambda = 0, alpha = 0.01; //regularization parameter and learning rate
+    double lambda = 1, alpha = 0.01; //regularization parameter and learning rate
     int Total = X.n_rows, batch_size = X.n_rows/100;
     cout<<"\n\tStarting batch training.\n\n";
     umat prediction = (predict(Theta1, Theta2, X)==Y);
@@ -30,7 +31,7 @@ int main(){
         mat X_batch = X.rows(batch_size*(k),batch_size*(k+1)-1);
         mat Y_batch = Y.rows(batch_size*(k),batch_size*(k+1)-1);
         cout<<"Batch "<<k+1<<endl;
-        for(int i=0; i<50; ++i){
+        for(int i=0; i<10; ++i){
             cout<<"\tIteration "<<i<<endl;
             nn_params -= backpropogate(nn_params, inputLayerSize, HiddenLayerSize, OutputLayerSize, X_batch, Y_batch, lambda, alpha);
         }
@@ -49,5 +50,7 @@ int main(){
     prediction = (predict(Theta1, Theta2, X)==Y);
     accuracy = as_scalar(accu(prediction)*100.0/prediction.n_elem);
     cout<<"Prediction Accuracy on test set: "<<accuracy;
+
+    nn_params.save("parameters.csv",csv_ascii);
     return 0;
 }
