@@ -1,0 +1,10 @@
+*.[oa]
+*~
+*.cbp
+*.depend
+*.layout
+*.csv
+*.*-ubyte
+*.pgm
+*.stash
+intelliui/build*/

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1024</width>
+    <height>768</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>IntelliDetect</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <widget class="QLabel" name="result_label">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>560</y>
+      <width>141</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>15</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Result : </string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="confidence_label">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>600</y>
+      <width>141</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>15</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Confidence : </string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="load_btn">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>40</y>
+      <width>161</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Load Image</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="process_btn">
+    <property name="geometry">
+     <rect>
+      <x>730</x>
+      <y>40</y>
+      <width>161</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Process Image</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="pic_label">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>130</y>
+      <width>491</width>
+      <height>421</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="result_val_label">
+    <property name="geometry">
+     <rect>
+      <x>233</x>
+      <y>580</y>
+      <width>71</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="confidence_val_label">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>610</y>
+      <width>71</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="trainButton">
+    <property name="geometry">
+     <rect>
+      <x>417</x>
+      <y>43</y>
+      <width>141</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Train</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1024</width>
+     <height>25</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>
