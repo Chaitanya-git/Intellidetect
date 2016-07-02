@@ -29,14 +29,14 @@ class network{
         double accuracy(mat &m_X, mat &m_Y);
 };
 network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10,
-                 double lm = 1,double al = 2.5,double m = 1){
+                 double lm = 0.5,double al = 0.025,double m = 1){
     m_inputLayerSize = inpSize;
     m_hiddenLayerSize = HdSize;
     m_outputLayerSize = OpSize;
     m_lambda = lm;
     m_alpha = al;
     m_mu = m;
-    if(m_nn_params.load("parameters2.csv")==false){
+    if(m_nn_params.load("parameters.csv")==false){
         cout<<"Randomly initialising weights."<<endl;
         m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
         m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
@@ -44,10 +44,10 @@ network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10,
     }
     else{
         cout<<"Loading Network sizes from file."<<endl;
-//        inputLayerSize = as_scalar(nn_params(0));
-//        hiddenLayerSize = as_scalar(nn_params(1));
-//        outputLayerSize = as_scalar(nn_params(2));
-//        nn_params = nn_params.rows(3,nn_params.n_rows-1);
+        m_inputLayerSize = as_scalar(m_nn_params(0));
+        m_hiddenLayerSize = as_scalar(m_nn_params(1));
+        m_outputLayerSize = as_scalar(m_nn_params(2));
+        m_nn_params = m_nn_params.rows(3,m_nn_params.n_rows-1);
         m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
         m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
     }
@@ -89,7 +89,8 @@ mat network::output(mat Input){
     mat h1 = join_horiz(ones<mat>(z2.n_rows,1),sigmoid(z2));
     mat h2 = sigmoid(h1*trans(m_Theta2));
     mat pred = zeros(InputSize,1);
-    cout<<"Output: "<<h2;
+    cout<<"Output: "<<h2<<endl;
+    cout<<"Sum of outputs"<<accu(h2)<<endl;
     for(int i=0; i<InputSize; ++i){
         pred(i) = h2.row(i).max();
     }
@@ -183,9 +184,9 @@ void network::train(){
         mat X_batch = m_X.rows(batch_size*(k),batch_size*(k+1)-1);
         mat Y_batch = m_Y.rows(batch_size*(k),batch_size*(k+1)-1);
         cout<<"Batch "<<k+1<<endl;
-        for(int i=0; i<15; ++i){
-            cout<<"\tIteration "<<i<<endl;
-            m_nn_params = m_mu*m_nn_params - backpropogate(X_batch, Y_batch);
+        for(int i=0; i<35; ++i){
+            cout<<"\tIteration "<<i+1<<endl;
+            m_nn_params = m_mu*m_nn_params - m_alpha*backpropogate(X_batch, Y_batch);
         }
     }
     m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
@@ -197,8 +198,8 @@ void network::train(){
 
     cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y);
     mat hyper_params = {m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize};
-    m_nn_params = join_vert(vectorise(hyper_params),m_nn_params);
-    m_nn_params.save("parameters.csv",csv_ascii);
+    mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
+    tmp_params.save("parameters.csv",csv_ascii);
 }
 
 void network::load(string path, int startInd, int endInd){
