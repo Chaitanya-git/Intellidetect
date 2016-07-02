@@ -5,7 +5,7 @@
 #include <armadillo>
 
 QString fileName;
-network* net = new network();
+ReLU* net = new ReLU();
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)

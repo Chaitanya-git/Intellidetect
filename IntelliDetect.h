@@ -16,8 +16,8 @@ class network{
         string inpPath;
     public:
         network(int, int, int, double, double, double);
-        mat sigmoid(mat z);
-        mat sigmoidGradient(mat z);
+        mat activation(mat z);
+        mat activationGradient(mat z);
         mat randInitWeights(int Lin, int Lout);
         mat predict(mat Input);
         mat predict(string input);
@@ -29,14 +29,14 @@ class network{
         double accuracy(mat &m_X, mat &m_Y);
 };
 network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10,
-                 double lm = 0.5,double al = 0.025,double m = 1){
+                 double lm = 0.5,double al = 0.05,double m = 1){
     m_inputLayerSize = inpSize;
     m_hiddenLayerSize = HdSize;
     m_outputLayerSize = OpSize;
     m_lambda = lm;
     m_alpha = al;
     m_mu = m;
-    if(m_nn_params.load("parameters.csv")==false){
+    if(m_nn_params.load("parameters3.csv")==false){
         cout<<"Randomly initialising weights."<<endl;
         m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
         m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
@@ -54,13 +54,13 @@ network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10,
     cout<<"Weights Initialized"<<endl;
 }
 
-mat network::sigmoid(mat z){
-    return 1.0/(1.0 + exp(-z));
+mat network::activation(mat z){
+    return 1.0/(1.0 + exp(-z)); //Sigmoid Function
 }
 
-mat network::sigmoidGradient(mat z){
-    mat g = sigmoid(z);
-    return g%(1-g);         // '%'is the overloaded element wise multiplication operator
+mat network::activationGradient(mat z){ //Derivative of the sigmoid function
+    mat g = activation(z);
+    return g%(1-g);         // '%'is the overloaded element wise multiplication operator.
 }
 
 mat network::randInitWeights(int Lin, int Lout){
@@ -72,8 +72,8 @@ mat network::predict(mat Input){
     int InputSize = Input.n_rows;
     Input = join_horiz(ones<mat>(InputSize,1),Input);
     mat z2 = Input*trans(m_Theta1);
-    mat h1 = join_horiz(ones<mat>(z2.n_rows,1),sigmoid(z2));
-    mat h2 = sigmoid(h1*trans(m_Theta2));
+    mat h1 = join_horiz(ones<mat>(z2.n_rows,1),activation(z2));
+    mat h2 = activation(h1*trans(m_Theta2));
     mat pred = zeros(InputSize,1);
     uword index;
     for(int i=0; i<InputSize; ++i){
@@ -86,8 +86,8 @@ mat network::output(mat Input){
     int InputSize = Input.n_rows;
     Input = join_horiz(ones<mat>(InputSize,1),Input);
     mat z2 = Input*trans(m_Theta1);
-    mat h1 = join_horiz(ones<mat>(z2.n_rows,1),sigmoid(z2));
-    mat h2 = sigmoid(h1*trans(m_Theta2));
+    mat h1 = join_horiz(ones<mat>(z2.n_rows,1),activation(z2));
+    mat h2 = activation(h1*trans(m_Theta2));
     mat pred = zeros(InputSize,1);
     cout<<"Output: "<<h2<<endl;
     cout<<"Sum of outputs"<<accu(h2)<<endl;
@@ -145,16 +145,16 @@ mat network::backpropogate(mat Inputs, mat Outputs){
     for(int i=0; i<InputSize; ++i){
         mat CurrentInput = trans(Inputs.row(i));
         mat z2 = Theta1*CurrentInput;
-        mat a2 = sigmoid(z2);
+        mat a2 = activation(z2);
         a2 = join_vert(ones<mat>(1,1),a2);
         mat z3 = Theta2*a2;
-        mat a3 = sigmoid(z3);
+        mat a3 = activation(z3);
         output_tmp(as_scalar(Outputs(i))) = 1;
 
         cost += as_scalar(accu(output_tmp%log(a3)+(1-output_tmp)%log(1-a3)))/InputSize*(-1);
 
         mat delta_3 = a3-output_tmp;
-        mat delta_2 = trans(Theta2.cols(1,Theta2.n_cols-1))*delta_3%sigmoidGradient(z2);
+        mat delta_2 = trans(Theta2.cols(1,Theta2.n_cols-1))*delta_3%activationGradient(z2);
 
         Theta1_grad += delta_2*CurrentInput.t();
         Theta2_grad += delta_3*a2.t();
@@ -196,10 +196,10 @@ void network::train(){
     cout<<"\n\nUsing test set"<<endl;
     load(inpPath);
 
-    cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y);
+    cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y)<<endl;
     mat hyper_params = {m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize};
     mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
-    tmp_params.save("parameters.csv",csv_ascii);
+    tmp_params.save("parameters3.csv",csv_ascii);
 }
 
 void network::load(string path, int startInd, int endInd){
@@ -219,4 +219,33 @@ double network::accuracy(mat &X, mat &Y){
     return as_scalar(accu(prediction)*100.0/prediction.n_elem);
 }
 
+class ReLU :public network {
+    public:
+        mat activation(mat z);
+        mat activationGradient(mat z);
+        mat randInitWeights(int Lin, int Lout);
+};
+
+mat ReLU::activation(mat z){
+    mat act = zeros(z.n_rows,1);
+    for(unsigned int i=0;i<z.n_rows;++i){
+        if(z(i,0)>0)
+            act(i,1) = z(i,1);
+    }
+    return act;
+}
+
+mat ReLU::activationGradient(mat z){
+    mat grad = zeros(z.n_rows,1);
+    for(unsigned int i=0;i<z.n_rows;++i){
+        if(z(i,0)>0)
+            grad(i,0) = 1;
+    }
+    return grad;
+}
+
+mat ReLU::randInitWeights(int Lin, int Lout){
+    double epsilon = 0.99;
+    return randu(Lin,Lout)*(2*epsilon) - epsilon;
+}
 #endif // INTELLIDETECT_H_INCLUDED
