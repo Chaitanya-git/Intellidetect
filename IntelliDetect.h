@@ -198,7 +198,11 @@ void network::train(double lambda = 0.5,double alpha = 0.05,double mu = 1){//reg
     load(inpPath);
 
     cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y)<<endl;
-    mat hyper_params = {m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize};
+    mat hyper_params = {
+                        static_cast<double>(m_inputLayerSize),
+                        static_cast<double>(m_hiddenLayerSize),
+                        static_cast<double>(m_outputLayerSize)
+                       };
     mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
     tmp_params.save("parameters3.csv",csv_ascii);
 }
