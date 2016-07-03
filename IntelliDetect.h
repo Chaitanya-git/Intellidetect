@@ -25,6 +25,7 @@ class network{
         mat backpropogate(mat, mat, double);
         void train(double, double, double);
         void load(string, int, int);
+        void load(mat&,mat&);
         double accuracy(mat&, mat&);
 };
 
@@ -60,6 +61,19 @@ void network::load(string path, int startInd=0, int endInd=0){
         m_X = m_X.rows(startInd,m_X.n_rows-1);
     m_Y = m_X.col(0);
     m_X = m_X.cols(1,m_X.n_cols-1);
+}
+
+void network::load(mat &Inputs, mat &Labels){
+    if(Inputs.n_rows != Labels.n_rows){
+        cout<<"network::load() error: Number of inputs do not match number of labels";
+        return;
+    }
+    if(Labels.n_cols>1){
+        cout<<"network::load() error: Labels cannot be a vector";
+        return;
+    }
+    m_X = Inputs;
+    m_Y = Labels;
 }
 
 mat network::activation(mat z){
@@ -241,4 +255,31 @@ mat ReLU::randInitWeights(int Lin, int Lout){
     double epsilon = 0.99;
     return randu(Lin,Lout)*(2*epsilon) - epsilon;
 }
+
+class ConvNet :public ReLU{
+        mat m_X,m_Y;
+        int m_imgHt,m_imgWth, m_strideLn, kernelSize;
+        vector<int> m_convSizes;
+        network m_FCnet;
+        vector<mat> m_kernels;
+        mat pool(mat,int);
+    public:
+        ConvNet(int,int,int,vector<int>,vector<int>);
+        mat backpropogate(mat, mat, double);
+        mat predict(mat);
+        mat output(mat);
+};
+
+ConvNet::ConvNet(int imgHt, int imgWth, int strideLn, vector<int> kernelSize, vector<int> convSizes){
+    m_FCnet = network(50,60,10);
+    m_imgHt = imgHt;
+    m_imgWth = imgWth;
+    m_strideLn = strideLn;
+    m_convSizes = convSizes;
+    for(int i=0;i<m_convSizes.size();++i){
+        for(int j=0;j<m_convSizes[i];++j)
+            m_kernels.push_back(ones(kernelSize[i],kernelSize[i]));
+    }
+}
+
 #endif // INTELLIDETECT_H_INCLUDED
