@@ -12,31 +12,27 @@ class network{
         mat m_X,m_Y;
         mat m_Theta1, m_Theta2, m_nn_params;
         int m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize;
-        double m_lambda, m_alpha, m_mu;//-alpha*lambda; //0.995; //regularization parameter and learning rate and a momentum constant
         string inpPath;
     public:
-        network(int, int, int, double, double, double);
-        mat activation(mat z);
-        mat activationGradient(mat z);
-        mat randInitWeights(int Lin, int Lout);
-        mat predict(mat Input);
-        mat predict(string input);
-        mat output(string input);
+        network(int, int, int);
+        mat activation(mat);
+        mat activationGradient(mat);
+        mat randInitWeights(int, int);
+        mat predict(mat);
+        mat predict(string);
+        mat output(string);
         mat output(mat);
-        mat backpropogate(mat Inputs, mat Outputs);
-        void train();
-        void load(string path, int startInd=0, int endInd=0);
-        double accuracy(mat &m_X, mat &m_Y);
+        mat backpropogate(mat, mat, double);
+        void train(double, double, double);
+        void load(string, int, int);
+        double accuracy(mat&, mat&);
 };
-network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10,
-                 double lm = 0.5,double al = 0.05,double m = 1){
+
+network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10){
     m_inputLayerSize = inpSize;
     m_hiddenLayerSize = HdSize;
     m_outputLayerSize = OpSize;
-    m_lambda = lm;
-    m_alpha = al;
-    m_mu = m;
-    if(m_nn_params.load("parameters3.csv")==false){
+    if(m_nn_params.load("parameters.csv")==false){
         cout<<"Randomly initialising weights."<<endl;
         m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
         m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
@@ -52,6 +48,18 @@ network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10,
         m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
     }
     cout<<"Weights Initialized"<<endl;
+}
+
+void network::load(string path, int startInd=0, int endInd=0){
+    inpPath = path;
+    m_X.load(path);
+    m_X = shuffle(m_X);
+    if(endInd)
+        m_X = m_X.rows(startInd,endInd);
+    else
+        m_X = m_X.rows(startInd,m_X.n_rows-1);
+    m_Y = m_X.col(0);
+    m_X = m_X.cols(1,m_X.n_cols-1);
 }
 
 mat network::activation(mat z){
@@ -100,8 +108,6 @@ mat network::output(mat Input){
 mat network::predict(string input){
     mat inputMat;
     inputMat.load(input);
-    //inputMat = X.row(200);
-    //inputMat = inputMat.t();
     cout<<inputMat.size()<<endl;
     umat tmpMat = conv_to<umat>::from(inputMat);
     tmpMat.reshape(28,28);
@@ -110,7 +116,6 @@ mat network::predict(string input){
             cout<<as_scalar(tmpMat.at(i,j))<<" ";
         cout<<endl;
     }
-    //cout<<endl<<"Y=: "<<as_scalar(Y.row(200))<<endl;
     inputMat.reshape(1,784);
     return predict(inputMat);
 }
@@ -118,8 +123,6 @@ mat network::predict(string input){
 mat network::output(string input){
     mat inputMat;
     inputMat.load(input);
-    //inputMat = X.row(200);
-    //inputMat = inputMat.t();
     cout<<inputMat.size()<<endl;
     umat tmpMat = conv_to<umat>::from(inputMat);
     tmpMat.reshape(28,28);
@@ -128,12 +131,11 @@ mat network::output(string input){
             cout<<as_scalar(tmpMat.at(i,j))<<" ";
         cout<<endl;
     }
-    //cout<<endl<<"Y=: "<<as_scalar(Y.row(200))<<endl;
     inputMat.reshape(1,784);
     return output(inputMat);
 }
 
-mat network::backpropogate(mat Inputs, mat Outputs){
+mat network::backpropogate(mat Inputs, mat Outputs, double lambda){
     mat Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
     mat Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.n_rows-1), m_outputLayerSize, m_hiddenLayerSize+1);
     int InputSize = Inputs.n_rows;
@@ -161,20 +163,19 @@ mat network::backpropogate(mat Inputs, mat Outputs){
         output_tmp(as_scalar(Outputs(i)),0) = 0;
     }
     cout<<"\tCost(unregularized) = "<<cost;
-    cost += (accu(square(Theta1.cols(1,Theta1.n_cols-1)))+accu(square(Theta2.cols(1,m_hiddenLayerSize))))*m_lambda/(2*InputSize);
+    cost += (accu(square(Theta1.cols(1,Theta1.n_cols-1)))+accu(square(Theta2.cols(1,m_hiddenLayerSize))))*lambda/(2*InputSize);
     cout<<"\t\tCost (regularized) = "<<cost<<endl;
     Theta1_grad /= InputSize;
     Theta2_grad /= InputSize;
 
-    Theta1_grad += join_horiz(zeros<mat>(Theta1.n_rows,1), (m_lambda/InputSize)*Theta1.cols(1,Theta1.n_cols-1));
-    Theta2_grad += join_horiz(zeros<mat>(Theta2.n_rows,1), (m_lambda/InputSize)*Theta2.cols(1,Theta2.n_cols-1));
+    Theta1_grad += join_horiz(zeros<mat>(Theta1.n_rows,1), (lambda/InputSize)*Theta1.cols(1,Theta1.n_cols-1));
+    Theta2_grad += join_horiz(zeros<mat>(Theta2.n_rows,1), (lambda/InputSize)*Theta2.cols(1,Theta2.n_cols-1));
 
     mat grad = join_vert(vectorise(Theta1_grad),vectorise(Theta2_grad));
-    //nn_params -= alpha*grad;
     return grad;
 }
 
-void network::train(){
+void network::train(double lambda = 0.5,double alpha = 0.05,double mu = 1){//regularization parameter and learning rate and a momentum constant
     int Total = m_X.n_rows, batch_size = m_X.n_rows/100;
     cout<<"\n\tStarting batch training.\n\n";
 
@@ -186,7 +187,7 @@ void network::train(){
         cout<<"Batch "<<k+1<<endl;
         for(int i=0; i<35; ++i){
             cout<<"\tIteration "<<i+1<<endl;
-            m_nn_params = m_mu*m_nn_params - m_alpha*backpropogate(X_batch, Y_batch);
+            m_nn_params = mu*m_nn_params - alpha*backpropogate(X_batch, Y_batch, lambda);
         }
     }
     m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
@@ -200,18 +201,6 @@ void network::train(){
     mat hyper_params = {m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize};
     mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
     tmp_params.save("parameters3.csv",csv_ascii);
-}
-
-void network::load(string path, int startInd, int endInd){
-    inpPath = path;
-    m_X.load(path);
-    m_X = shuffle(m_X);
-    if(endInd)
-        m_X = m_X.rows(startInd,endInd);
-    else
-        m_X = m_X.rows(startInd,m_X.n_rows-1);
-    m_Y = m_X.col(0);
-    m_X = m_X.cols(1,m_X.n_cols-1);
 }
 
 double network::accuracy(mat &X, mat &Y){
