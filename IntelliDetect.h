@@ -258,7 +258,7 @@ mat ReLU::randInitWeights(int Lin, int Lout){
 
 class ConvNet :public ReLU{
         mat m_X,m_Y;
-        int m_imgHt,m_imgWth, m_strideLn, kernelSize;
+        int m_imgHt,m_imgWth, m_strideLn;
         vector<int> m_convSizes;
         network m_FCnet;
         vector<mat> m_kernels;
@@ -276,10 +276,18 @@ ConvNet::ConvNet(int imgHt, int imgWth, int strideLn, vector<int> kernelSize, ve
     m_imgWth = imgWth;
     m_strideLn = strideLn;
     m_convSizes = convSizes;
-    for(int i=0;i<m_convSizes.size();++i){
+    for(unsigned int i=0;i<m_convSizes.size();++i){
         for(int j=0;j<m_convSizes[i];++j)
             m_kernels.push_back(ones(kernelSize[i],kernelSize[i]));
     }
 }
 
+mat ConvNet::pool(mat layer, int downsamplingFactor){
+    mat linearLayer = vectorise(layer);
+    mat downsampledLayer = zeros(linearLayer.n_rows/downsamplingFactor);
+    for(unsigned int i=0;i<downsampledLayer.n_rows;++i){
+        downsampledLayer(i,0) = linearLayer.rows(i*downsamplingFactor,(i+1)*downsamplingFactor-1).max();
+    }
+    return downsampledLayer;
+}
 #endif // INTELLIDETECT_H_INCLUDED
