@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "QFileDialog"
-#include "../../../../Dropbox/CODE/c++/SCHOOL/IntelliDetect 2.1/IntelliDetect.h"
+#include "IntelliDetect.h"
 #include <armadillo>
 
 QString fileName;
