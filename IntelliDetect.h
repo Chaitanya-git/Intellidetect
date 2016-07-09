@@ -12,7 +12,7 @@ class network{
         mat m_X,m_Y;
         mat m_Theta1, m_Theta2, m_nn_params;
         int m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize;
-        vector<string> inpPaths;
+        vector<string> m_inpPaths;
     public:
         network(int, int, int);
         mat activation(mat);
@@ -24,6 +24,7 @@ class network{
         mat output(mat);
         mat backpropogate(mat, mat, double);
         void train(double, double, double);
+        void train(string, int, double, double, double);
         bool load(vector<string>, int, int);
         bool load(string, int, int);
         bool load(mat&,mat&);
@@ -58,14 +59,14 @@ bool network::load(vector<string> paths, int startInd=0, int endInd=0){
         return false;
     }
 
-    inpPaths = paths;
+    m_inpPaths = paths;
     mat tmpX;
     m_X.resize(0,0);
     unsigned int i=0;
     do{
-        tmpX.load(inpPaths.at(i++));
+        tmpX.load(m_inpPaths.at(i++));
         m_X = join_vert(m_X,tmpX);
-    }while(i<inpPaths.size()-1); //last path represents test set.)
+    }while(i<m_inpPaths.size()-1); //last path represents test set.)
     m_X = shuffle(m_X);
     if(endInd)
         m_X = m_X.rows(startInd,endInd);
@@ -243,16 +244,52 @@ void network::train(double lambda = 0.5,double alpha = 0.05,double mu = 1){//reg
 
     cout<<"Prediction Accuracy on training set: "<<accuracy(m_X, m_Y)<<endl;
 
-    if(inpPaths.size()){
-        if(load(inpPaths.at(inpPaths.size()-1))==true){
-            cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y)<<endl;
+    if(m_inpPaths.size()){
+        if(load(m_inpPaths.at(m_inpPaths.size()-1))==true){
             cout<<"\n\nUsing test set"<<endl;
+            cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y)<<endl;
         }
         else
             cout<<"Could not load test set. Training may be incomplete."<<endl;
     }
     else
         cout<<"No training set provided."<<endl;
+    mat hyper_params = {
+                        static_cast<double>(m_inputLayerSize),
+                        static_cast<double>(m_hiddenLayerSize),
+                        static_cast<double>(m_outputLayerSize)
+                       };
+    mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
+    tmp_params.save("parameters3.csv",csv_ascii);
+}
+
+void network::train(string input, int label, double lambda = 0.5,double alpha = 0.05,double mu = 1){//regularization parameter and learning rate and a momentum constant
+
+
+    cout<<"\n\tStarting individual training.\n\n";
+
+    mat X = zeros(28,28);
+    mat Y = zeros(1,1);
+    X.load(input);
+    X.reshape(1,784);
+    Y.at(0) = label;
+    cout<<"Overall Prediction Accuracy before training: "<<accuracy(X, Y)<<endl<<endl;
+
+    int i=0;
+    while(1){
+        cout<<"\tIteration "<<++i<<endl;
+        m_nn_params = mu*m_nn_params - alpha*backpropogate(X, Y, lambda);
+        m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
+        m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
+        mat out = predict(X);
+        mat conf = output(X);
+        if(out.at(0) == label && conf(label)>50.0)
+            break;
+    }
+
+    cout<<"Done training on given example."<<endl;
+    cout<<"Overall Prediction Accuracy after training: "<<accuracy(X, Y)<<endl<<endl;
+
     mat hyper_params = {
                         static_cast<double>(m_inputLayerSize),
                         static_cast<double>(m_hiddenLayerSize),

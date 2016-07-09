@@ -67,14 +67,10 @@ void MainWindow::on_actionTrain_from_file_triggered()
 void MainWindow::on_actionTrain_for_current_input_triggered()
 {
     string fileStr = fileName.toUtf8().constData();
-    mat X_batch = zeros(28,28);
-    mat Y_batch = zeros(1,1);
-    X_batch.load(fileStr);
-    X_batch.reshape(1,784);
-    Y_batch(0) = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),0,0,9);
-    cout<<"Size of X = "<<X_batch.n_rows<<"x"<<X_batch.n_cols;
-    cout<<"Size of Y = "<<Y_batch.n_rows<<"x"<<Y_batch.n_cols;
-    net->load(X_batch, Y_batch);
-    net->train(0.5,0.0001);
+    int Label = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),0,0,9);
+//    cout<<"Size of X = "<<X_batch.n_rows<<"x"<<X_batch.n_cols;
+//    cout<<"Size of Y = "<<Y_batch.n_rows<<"x"<<Y_batch.n_cols;
+//    net->load(X_batch, Y_batch);
+    net->train(fileStr, Label, 0.5,0.0001);
     //net->train(1, fileStr);
 }
