@@ -24,8 +24,7 @@ LIBS += -larmadillo
 SOURCES += main.cpp\
         mainwindow.cpp
 
-HEADERS  += mainwindow.h \
-    ../../intellidetect.h
-
+HEADERS  += mainwindow.h
+INCLUDEPATH += "/home/chaitanya/IntelliDetect 2.1/"
 FORMS    += mainwindow.ui
 

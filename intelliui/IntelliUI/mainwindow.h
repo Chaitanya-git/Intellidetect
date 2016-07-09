@@ -18,7 +18,8 @@ public:
 private slots:
     void on_load_btn_clicked();
     void on_process_btn_clicked();
-    void on_trainButton_clicked();
+    void on_actionTrain_from_file_triggered();
+    void on_actionTrain_for_current_input_triggered();
 
 private:
     Ui::MainWindow *ui;

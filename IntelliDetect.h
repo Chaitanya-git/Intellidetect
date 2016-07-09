@@ -12,7 +12,7 @@ class network{
         mat m_X,m_Y;
         mat m_Theta1, m_Theta2, m_nn_params;
         int m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize;
-        string inpPath;
+        vector<string> inpPaths;
     public:
         network(int, int, int);
         mat activation(mat);
@@ -24,8 +24,9 @@ class network{
         mat output(mat);
         mat backpropogate(mat, mat, double);
         void train(double, double, double);
-        void load(string, int, int);
-        void load(mat&,mat&);
+        bool load(vector<string>, int, int);
+        bool load(string, int, int);
+        bool load(mat&,mat&);
         double accuracy(mat&, mat&);
 };
 
@@ -33,7 +34,7 @@ network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10){
     m_inputLayerSize = inpSize;
     m_hiddenLayerSize = HdSize;
     m_outputLayerSize = OpSize;
-    if(m_nn_params.load("parameters.csv")==false){
+    if(m_nn_params.load("parameters3.csv")==false){
         cout<<"Randomly initialising weights."<<endl;
         m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
         m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
@@ -51,9 +52,20 @@ network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10){
     cout<<"Weights Initialized"<<endl;
 }
 
-void network::load(string path, int startInd=0, int endInd=0){
-    inpPath = path;
-    m_X.load(path);
+bool network::load(vector<string> paths, int startInd=0, int endInd=0){
+    if(!paths.size()){
+        cout<<"network::load(): error: Input file list is empty.";
+        return false;
+    }
+
+    inpPaths = paths;
+    mat tmpX;
+    m_X.resize(0,0);
+    unsigned int i=0;
+    do{
+        tmpX.load(inpPaths.at(i++));
+        m_X = join_vert(m_X,tmpX);
+    }while(i<inpPaths.size()-1); //last path represents test set.)
     m_X = shuffle(m_X);
     if(endInd)
         m_X = m_X.rows(startInd,endInd);
@@ -61,19 +73,37 @@ void network::load(string path, int startInd=0, int endInd=0){
         m_X = m_X.rows(startInd,m_X.n_rows-1);
     m_Y = m_X.col(0);
     m_X = m_X.cols(1,m_X.n_cols-1);
+
+    return true;
 }
 
-void network::load(mat &Inputs, mat &Labels){
+bool network::load(string path, int startInd=0, int endInd=0){
+    if(m_X.load(path)==false)
+        return false;
+    m_X = shuffle(m_X);
+    if(endInd)
+        m_X = m_X.rows(startInd,endInd);
+    else
+        m_X = m_X.rows(startInd,m_X.n_rows-1);
+    m_Y = m_X.col(0);
+    m_X = m_X.cols(1,m_X.n_cols-1);
+
+    return true;
+}
+
+bool network::load(mat &Inputs, mat &Labels){
     if(Inputs.n_rows != Labels.n_rows){
         cout<<"network::load() error: Number of inputs do not match number of labels";
-        return;
+        return false;
     }
     if(Labels.n_cols>1){
         cout<<"network::load() error: Labels cannot be a vector";
-        return;
+        return false;
     }
     m_X = Inputs;
     m_Y = Labels;
+
+    return true;
 }
 
 mat network::activation(mat z){
@@ -190,7 +220,11 @@ mat network::backpropogate(mat Inputs, mat Outputs, double lambda){
 }
 
 void network::train(double lambda = 0.5,double alpha = 0.05,double mu = 1){//regularization parameter and learning rate and a momentum constant
-    int Total = m_X.n_rows, batch_size = m_X.n_rows/100;
+    int Total = m_X.n_rows, batch_size = m_X.n_rows/100, IterCnt = 35;
+    if(!batch_size){
+        batch_size = 1;
+        IterCnt = 10;
+    }
     cout<<"\n\tStarting batch training.\n\n";
 
     cout<<"Prediction Accuracy before training: "<<accuracy(m_X, m_Y)<<endl<<endl;
@@ -199,7 +233,7 @@ void network::train(double lambda = 0.5,double alpha = 0.05,double mu = 1){//reg
         mat X_batch = m_X.rows(batch_size*(k),batch_size*(k+1)-1);
         mat Y_batch = m_Y.rows(batch_size*(k),batch_size*(k+1)-1);
         cout<<"Batch "<<k+1<<endl;
-        for(int i=0; i<35; ++i){
+        for(int i=0; i<IterCnt; ++i){
             cout<<"\tIteration "<<i+1<<endl;
             m_nn_params = mu*m_nn_params - alpha*backpropogate(X_batch, Y_batch, lambda);
         }
@@ -207,11 +241,18 @@ void network::train(double lambda = 0.5,double alpha = 0.05,double mu = 1){//reg
     m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
     m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
 
-    cout<<"Prediction Accuracy on training set: "<<accuracy(m_X, m_Y);
-    cout<<"\n\nUsing test set"<<endl;
-    load(inpPath);
+    cout<<"Prediction Accuracy on training set: "<<accuracy(m_X, m_Y)<<endl;
 
-    cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y)<<endl;
+    if(inpPaths.size()){
+        if(load(inpPaths.at(inpPaths.size()-1))==true){
+            cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y)<<endl;
+            cout<<"\n\nUsing test set"<<endl;
+        }
+        else
+            cout<<"Could not load test set. Training may be incomplete."<<endl;
+    }
+    else
+        cout<<"No training set provided."<<endl;
     mat hyper_params = {
                         static_cast<double>(m_inputLayerSize),
                         static_cast<double>(m_hiddenLayerSize),
