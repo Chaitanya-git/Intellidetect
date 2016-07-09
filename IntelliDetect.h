@@ -283,7 +283,7 @@ void network::train(string input, int label, double lambda = 0.5,double alpha = 
         m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
         mat out = predict(X);
         mat conf = output(X);
-        if(out.at(0) == label && conf(label)>50.0)
+        if(out.at(0) == label && conf(label)>0.5)
             break;
     }
 
