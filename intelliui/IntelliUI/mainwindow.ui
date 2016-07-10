@@ -122,22 +122,24 @@
      <x>0</x>
      <y>0</y>
      <width>1024</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
-     <string>Optio&amp;ns</string>
+     <string>Tools</string>
     </property>
+    <addaction name="actionLoad_network_from_file"/>
     <addaction name="actionTrain_from_file"/>
     <addaction name="actionTrain_for_current_input"/>
+    <addaction name="actionView_training_statistics"/>
    </widget>
    <addaction name="menuOptions"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionTrain_from_file">
    <property name="text">
-    <string>&amp;Train from file ...</string>
+    <string>&amp;Train from file</string>
    </property>
    <property name="menuRole">
     <enum>QAction::ApplicationSpecificRole</enum>
@@ -147,8 +149,27 @@
    <property name="text">
     <string>Train &amp;for current input</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
    <property name="menuRole">
     <enum>QAction::ApplicationSpecificRole</enum>
+   </property>
+  </action>
+  <action name="actionLoad_network_from_file">
+   <property name="text">
+    <string>Load network from file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionView_training_statistics">
+   <property name="text">
+    <string>View training statistics</string>
    </property>
   </action>
  </widget>

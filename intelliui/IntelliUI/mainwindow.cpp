@@ -52,13 +52,19 @@ void MainWindow::on_actionTrain_from_file_triggered()
     QFileDialog dialog(this);
     dialog.setNameFilter(tr("CSV Data files (*.csv)"));
     dialog.setViewMode(QFileDialog::Detail);
-    QStringList csv_files = QFileDialog::getOpenFileNames(this, tr("Open File"),"",tr("CSV Files (*.csv)"));
+    QStringList csv_files = QFileDialog::getOpenFileNames(this, tr("Select training sets"),"",tr("CSV Files (*.csv)"));
+    QString test_set = QFileDialog::getOpenFileName(this, tr("Select test set"),"",tr("CSV Files (*.csv)"));
     vector<string> fileNames;
     fileNames.resize(0);
     for(int i=0;i<csv_files.size();++i){
         fileNames.push_back(csv_files.at(i).toUtf8().constData());
     }
+    fileNames.push_back(test_set.toUtf8().constData());
     if(!csv_files.isEmpty()){
+        if(net->getPath().empty()){
+            QString param_path = QFileDialog::getSaveFileName(this, tr("Choose file to save data"),"",tr("Network Parameter files (*.CSV)"));
+            net = new ReLU(param_path.toUtf8().constData());
+        }
         net->load(fileNames);
         net->train();
     }
@@ -68,9 +74,14 @@ void MainWindow::on_actionTrain_for_current_input_triggered()
 {
     string fileStr = fileName.toUtf8().constData();
     int Label = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),0,0,9);
-//    cout<<"Size of X = "<<X_batch.n_rows<<"x"<<X_batch.n_cols;
-//    cout<<"Size of Y = "<<Y_batch.n_rows<<"x"<<Y_batch.n_cols;
-//    net->load(X_batch, Y_batch);
     net->train(fileStr, Label, 0.0,0.0001);
-    //net->train(1, fileStr);
+}
+
+void MainWindow::on_actionLoad_network_from_file_triggered()
+{
+    QString net_params = QFileDialog::getOpenFileName(this, tr("Select network file"),"",tr("Network parameter files (*.CSV)"));
+    if(!net_params.isEmpty()){
+        string param = net_params.toUtf8().constData();
+        net = new ReLU(param);
+    }
 }

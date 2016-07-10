@@ -12,9 +12,13 @@ class network{
         mat m_X,m_Y;
         mat m_Theta1, m_Theta2, m_nn_params;
         int m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize;
+        string m_paramPath;
         vector<string> m_inpPaths;
     public:
-        network(int, int, int);
+        mat trainSetCostsReg;
+        mat trainSetCosts;
+
+        network(string, int, int, int);
         mat activation(mat);
         mat activationGradient(mat);
         mat randInitWeights(int, int);
@@ -29,13 +33,15 @@ class network{
         bool load(string, int, int);
         bool load(mat&,mat&);
         double accuracy(mat&, mat&);
+        string getPath();
 };
 
-network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10){
+network::network(string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
     m_inputLayerSize = inpSize;
     m_hiddenLayerSize = HdSize;
     m_outputLayerSize = OpSize;
-    if(m_nn_params.load("parameters3.csv")==false){
+    m_paramPath = param;
+    if(m_nn_params.load(param)==false){
         cout<<"Randomly initialising weights."<<endl;
         m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
         m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
@@ -51,6 +57,8 @@ network::network(int inpSize = 784, int HdSize = 100, int OpSize = 10){
         m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
     }
     cout<<"Weights Initialized"<<endl;
+    trainSetCosts.resize(0);
+    trainSetCostsReg.resize(0);
 }
 
 bool network::load(vector<string> paths, int startInd=0, int endInd=0){
@@ -192,8 +200,10 @@ mat network::backpropogate(mat Inputs, mat Outputs, double lambda){
         output_tmp(as_scalar(Outputs(i)),0) = 0;
     }
     cout<<"\tCost(unregularized) = "<<cost;
+    trainSetCosts<<cost;
     cost += (accu(square(Theta1.cols(1,Theta1.n_cols-1)))+accu(square(Theta2.cols(1,m_hiddenLayerSize))))*lambda/(2*InputSize);
     cout<<"\t\tCost (regularized) = "<<cost<<endl;
+    trainSetCostsReg<<cost;
     Theta1_grad /= InputSize;
     Theta2_grad /= InputSize;
 
@@ -244,7 +254,7 @@ void network::train(double lambda = 0.5,double alpha = 0.05,double mu = 1){//reg
                         static_cast<double>(m_outputLayerSize)
                        };
     mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
-    tmp_params.save("parameters3.csv",csv_ascii);
+    tmp_params.save(m_paramPath,csv_ascii);
 }
 
 void network::train(string input, int label, double lambda = 0.5,double alpha = 0.05,double mu = 1){//regularization parameter and learning rate and a momentum constant
@@ -289,8 +299,13 @@ double network::accuracy(mat &X, mat &Y){
     return as_scalar(accu(prediction)*100.0/prediction.n_elem);
 }
 
+string network::getPath(){
+    return m_paramPath;
+}
+
 class ReLU :public network {
     public:
+        ReLU(string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10):network(param,inpSize,HdSize,OpSize){;};
         mat activation(mat z);
         mat activationGradient(mat z);
         mat randInitWeights(int Lin, int Lout);
@@ -334,7 +349,7 @@ class ConvNet :public ReLU{
 };
 
 ConvNet::ConvNet(int imgHt, int imgWth, int strideLn, vector<int> kernelSize, vector<int> convSizes){
-    m_FCnet = network(50,60,10);
+    m_FCnet = network("",50,60,10);
     m_imgHt = imgHt;
     m_imgWth = imgWth;
     m_strideLn = strideLn;

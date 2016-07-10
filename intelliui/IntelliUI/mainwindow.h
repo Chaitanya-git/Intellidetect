@@ -21,6 +21,8 @@ private slots:
     void on_actionTrain_from_file_triggered();
     void on_actionTrain_for_current_input_triggered();
 
+    void on_actionLoad_network_from_file_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

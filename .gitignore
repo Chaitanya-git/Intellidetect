@@ -8,4 +8,5 @@
 *.pgm
 *.stash
 *.pro
-intelliui/build*/
+*.pro.*
+*/build*/
