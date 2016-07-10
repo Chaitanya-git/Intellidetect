@@ -23,6 +23,8 @@ private slots:
 
     void on_actionLoad_network_from_file_triggered();
 
+    void on_actionView_training_statistics_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

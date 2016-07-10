@@ -12,10 +12,10 @@ MAKEFILE      = Makefile
 
 CC            = gcc
 CXX           = g++
-DEFINES       = -DQT_QML_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB
+DEFINES       = -DQT_QML_DEBUG -DQT_CHARTS_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB
 CFLAGS        = -pipe -g -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 CXXFLAGS      = -pipe -std=c++11 -O3 -larmadillo -llapack -lopenblas -g -Wall -W -D_REENTRANT -fPIC $(DEFINES)
-INCPATH       = -I../../IntelliUI -I. -I/home/chaitanya/IntelliDetect\ 2.1/ -isystem /usr/include/qt -isystem /usr/include/qt/QtWidgets -isystem /usr/include/qt/QtGui -isystem /usr/include/qt/QtCore -I. -I. -I/usr/lib/qt/mkspecs/linux-g++
+INCPATH       = -I../../IntelliUI -I. -I/home/chaitanya/IntelliDetect\ 2.1/ -isystem /usr/include/qt -isystem /usr/include/qt/QtCharts -isystem /usr/include/qt/QtWidgets -isystem /usr/include/qt/QtGui -isystem /usr/include/qt/QtCore -I. -I. -I/usr/lib/qt/mkspecs/linux-g++
 QMAKE         = /usr/lib/qt/bin/qmake
 DEL_FILE      = rm -f
 CHK_DIR_EXISTS= test -d
@@ -36,7 +36,7 @@ DISTNAME      = IntelliUI1.0.0
 DISTDIR = /home/chaitanya/Development/IntelliDetect\ 2.1/intelliui/IntelliUI/build/.tmp/IntelliUI1.0.0
 LINK          = g++
 LFLAGS        = 
-LIBS          = $(SUBLIBS) -llapack -lblas -larmadillo -lQt5Widgets -lQt5Gui -lQt5Core -lGL -lpthread 
+LIBS          = $(SUBLIBS) -llapack -lblas -larmadillo -lQt5Charts -lQt5Widgets -lQt5Gui -lQt5Core -lGL -lpthread 
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -149,11 +149,15 @@ DIST          = /usr/lib/qt/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt/mkspecs/modules/qt_lib_bluetooth.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_bluetooth_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_bootstrap_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_charts.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_charts_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_clucene_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_concurrent.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_concurrent_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_core.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_core_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_datavisualization.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_datavisualization_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_dbus.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_dbus_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_declarative.pri \
@@ -165,6 +169,8 @@ DIST          = /usr/lib/qt/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt/mkspecs/modules/qt_lib_eglfs_kms_support_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_enginio.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_enginio_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_gamepad.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_gamepad_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_gui.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_gui_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_help.pri \
@@ -198,15 +204,22 @@ DIST          = /usr/lib/qt/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt/mkspecs/modules/qt_lib_qtmultimediaquicktools_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quick.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quick_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_quickcontrols2.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_quickcontrols2_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quickparticles_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_quicktemplates2_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quickwidgets.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quickwidgets_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_script.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_script_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_scripttools.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_scripttools_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_scxml.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_scxml_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_sensors.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_sensors_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_serialbus.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_serialbus_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_serialport.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_serialport_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_sql.pri \
@@ -237,6 +250,8 @@ DIST          = /usr/lib/qt/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt/mkspecs/modules/qt_lib_webkitwidgets_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_websockets.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_websockets_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_webview.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_webview_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_widgets.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_widgets_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_x11extras.pri \
@@ -260,6 +275,7 @@ DIST          = /usr/lib/qt/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt/mkspecs/features/qt_config.prf \
 		/usr/lib/qt/mkspecs/linux-g++/qmake.conf \
 		/usr/lib/qt/mkspecs/features/spec_post.prf \
+		../.qmake.stash \
 		/usr/lib/qt/mkspecs/features/exclusive_builds.prf \
 		/usr/lib/qt/mkspecs/features/default_pre.prf \
 		/usr/lib/qt/mkspecs/features/resolve_config.prf \
@@ -386,11 +402,15 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 		/usr/lib/qt/mkspecs/modules/qt_lib_bluetooth.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_bluetooth_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_bootstrap_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_charts.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_charts_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_clucene_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_concurrent.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_concurrent_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_core.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_core_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_datavisualization.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_datavisualization_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_dbus.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_dbus_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_declarative.pri \
@@ -402,6 +422,8 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 		/usr/lib/qt/mkspecs/modules/qt_lib_eglfs_kms_support_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_enginio.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_enginio_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_gamepad.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_gamepad_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_gui.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_gui_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_help.pri \
@@ -435,15 +457,22 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 		/usr/lib/qt/mkspecs/modules/qt_lib_qtmultimediaquicktools_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quick.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quick_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_quickcontrols2.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_quickcontrols2_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quickparticles_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_quicktemplates2_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quickwidgets.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_quickwidgets_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_script.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_script_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_scripttools.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_scripttools_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_scxml.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_scxml_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_sensors.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_sensors_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_serialbus.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_serialbus_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_serialport.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_serialport_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_sql.pri \
@@ -474,6 +503,8 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 		/usr/lib/qt/mkspecs/modules/qt_lib_webkitwidgets_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_websockets.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_websockets_private.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_webview.pri \
+		/usr/lib/qt/mkspecs/modules/qt_lib_webview_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_widgets.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_widgets_private.pri \
 		/usr/lib/qt/mkspecs/modules/qt_lib_x11extras.pri \
@@ -497,6 +528,7 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 		/usr/lib/qt/mkspecs/features/qt_config.prf \
 		/usr/lib/qt/mkspecs/linux-g++/qmake.conf \
 		/usr/lib/qt/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		/usr/lib/qt/mkspecs/features/exclusive_builds.prf \
 		/usr/lib/qt/mkspecs/features/default_pre.prf \
 		/usr/lib/qt/mkspecs/features/resolve_config.prf \
@@ -515,6 +547,7 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 		/usr/lib/qt/mkspecs/features/yacc.prf \
 		/usr/lib/qt/mkspecs/features/lex.prf \
 		../IntelliUI.pro \
+		/usr/lib/libQt5Charts.prl \
 		/usr/lib/libQt5Widgets.prl \
 		/usr/lib/libQt5Gui.prl \
 		/usr/lib/libQt5Core.prl
@@ -615,11 +648,15 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 /usr/lib/qt/mkspecs/modules/qt_lib_bluetooth.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_bluetooth_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_bootstrap_private.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_charts.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_charts_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_clucene_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_concurrent.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_concurrent_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_core.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_core_private.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_datavisualization.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_datavisualization_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_dbus.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_dbus_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_declarative.pri:
@@ -631,6 +668,8 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 /usr/lib/qt/mkspecs/modules/qt_lib_eglfs_kms_support_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_enginio.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_enginio_private.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_gamepad.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_gamepad_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_gui.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_gui_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_help.pri:
@@ -664,15 +703,22 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 /usr/lib/qt/mkspecs/modules/qt_lib_qtmultimediaquicktools_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_quick.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_quick_private.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_quickcontrols2.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_quickcontrols2_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_quickparticles_private.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_quicktemplates2_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_quickwidgets.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_quickwidgets_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_script.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_script_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_scripttools.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_scripttools_private.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_scxml.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_scxml_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_sensors.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_sensors_private.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_serialbus.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_serialbus_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_serialport.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_serialport_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_sql.pri:
@@ -703,6 +749,8 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 /usr/lib/qt/mkspecs/modules/qt_lib_webkitwidgets_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_websockets.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_websockets_private.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_webview.pri:
+/usr/lib/qt/mkspecs/modules/qt_lib_webview_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_widgets.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_widgets_private.pri:
 /usr/lib/qt/mkspecs/modules/qt_lib_x11extras.pri:
@@ -726,6 +774,7 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 /usr/lib/qt/mkspecs/features/qt_config.prf:
 /usr/lib/qt/mkspecs/linux-g++/qmake.conf:
 /usr/lib/qt/mkspecs/features/spec_post.prf:
+.qmake.stash:
 /usr/lib/qt/mkspecs/features/exclusive_builds.prf:
 /usr/lib/qt/mkspecs/features/default_pre.prf:
 /usr/lib/qt/mkspecs/features/resolve_config.prf:
@@ -744,6 +793,7 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 /usr/lib/qt/mkspecs/features/yacc.prf:
 /usr/lib/qt/mkspecs/features/lex.prf:
 ../IntelliUI.pro:
+/usr/lib/libQt5Charts.prl:
 /usr/lib/libQt5Widgets.prl:
 /usr/lib/libQt5Gui.prl:
 /usr/lib/libQt5Core.prl:
@@ -794,7 +844,7 @@ compiler_moc_header_clean:
 	-$(DEL_FILE) moc_mainwindow.cpp
 moc_mainwindow.cpp: ../mainwindow.h \
 		/usr/lib/qt/bin/moc
-	/usr/lib/qt/bin/moc $(DEFINES) -I/usr/lib/qt/mkspecs/linux-g++ -I'/home/chaitanya/Development/IntelliDetect 2.1/intelliui/IntelliUI' -I'/home/chaitanya/IntelliDetect 2.1' -I/usr/include/qt -I/usr/include/qt/QtWidgets -I/usr/include/qt/QtGui -I/usr/include/qt/QtCore -I. -I/usr/include/c++/6.1.1 -I/usr/include/c++/6.1.1/x86_64-pc-linux-gnu -I/usr/include/c++/6.1.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/6.1.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/6.1.1/include-fixed -I/usr/include ../mainwindow.h -o moc_mainwindow.cpp
+	/usr/lib/qt/bin/moc $(DEFINES) -I/usr/lib/qt/mkspecs/linux-g++ -I'/home/chaitanya/Development/IntelliDetect 2.1/intelliui/IntelliUI' -I'/home/chaitanya/IntelliDetect 2.1' -I/usr/include/qt -I/usr/include/qt/QtCharts -I/usr/include/qt/QtWidgets -I/usr/include/qt/QtGui -I/usr/include/qt/QtCore -I. -I/usr/include/c++/6.1.1 -I/usr/include/c++/6.1.1/x86_64-pc-linux-gnu -I/usr/include/c++/6.1.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/6.1.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/6.1.1/include-fixed -I/usr/include ../mainwindow.h -o moc_mainwindow.cpp
 
 compiler_moc_source_make_all:
 compiler_moc_source_clean:
