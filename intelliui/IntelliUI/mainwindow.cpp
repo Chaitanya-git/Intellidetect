@@ -30,17 +30,12 @@ void MainWindow::on_load_btn_clicked()
         fileName = QFileDialog::getOpenFileName(this, tr("Open File"),
                                                         "",
                                                         tr("Images (*.pgm)"));
-
-
         QPixmap imgpixmap(fileName);
-
         ui->pic_label->setPixmap(imgpixmap);
         ui->pic_label->setScaledContents( true );
-
         ui->pic_label->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
-
-
 }
+
 void MainWindow::on_process_btn_clicked()
 {
     string fileStr = fileName.toUtf8().constData();
@@ -112,4 +107,9 @@ void MainWindow::on_actionView_training_statistics_triggered()
     chartView->setRenderHint(QPainter::Antialiasing);
     chartView->resize(1024,768);
     chartView->show();
+}
+
+void MainWindow::on_actionNew_network_triggered()
+{
+    net = new ReLU();
 }
