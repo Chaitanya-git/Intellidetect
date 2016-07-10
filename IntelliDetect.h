@@ -153,14 +153,6 @@ mat network::output(mat Input){
 mat network::predict(string input){
     mat inputMat;
     inputMat.load(input);
-    cout<<inputMat.size()<<endl;
-    umat tmpMat = conv_to<umat>::from(inputMat);
-    tmpMat.reshape(28,28);
-    for(int i=0;i<28;++i){
-        for(int j=0;j<28;++j)
-            cout<<as_scalar(tmpMat.at(i,j))<<" ";
-        cout<<endl;
-    }
     inputMat.reshape(1,784);
     return predict(inputMat);
 }
@@ -168,14 +160,6 @@ mat network::predict(string input){
 mat network::output(string input){
     mat inputMat;
     inputMat.load(input);
-    cout<<inputMat.size()<<endl;
-    umat tmpMat = conv_to<umat>::from(inputMat);
-    tmpMat.reshape(28,28);
-    for(int i=0;i<28;++i){
-        for(int j=0;j<28;++j)
-            cout<<as_scalar(tmpMat.at(i,j))<<" ";
-        cout<<endl;
-    }
     inputMat.reshape(1,784);
     return output(inputMat);
 }
@@ -283,7 +267,8 @@ void network::train(string input, int label, double lambda = 0.5,double alpha = 
         m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
         mat out = predict(X);
         mat conf = output(X);
-        if(out.at(0) == label && conf(label)>0.5)
+        cout<<"out.at(0) = "<<out.at(0)<<endl<<"confidence = "<<conf(0)<<endl;
+        if(out.at(0) == label && conf(0)>0.5)
             break;
     }
 

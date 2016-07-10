@@ -71,6 +71,6 @@ void MainWindow::on_actionTrain_for_current_input_triggered()
 //    cout<<"Size of X = "<<X_batch.n_rows<<"x"<<X_batch.n_cols;
 //    cout<<"Size of Y = "<<Y_batch.n_rows<<"x"<<Y_batch.n_cols;
 //    net->load(X_batch, Y_batch);
-    net->train(fileStr, Label, 0.5,0.0001);
+    net->train(fileStr, Label, 0.0,0.0001);
     //net->train(1, fileStr);
 }
