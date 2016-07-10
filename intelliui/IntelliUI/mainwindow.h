@@ -25,6 +25,8 @@ private slots:
 
     void on_actionView_training_statistics_triggered();
 
+    void on_actionNew_network_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

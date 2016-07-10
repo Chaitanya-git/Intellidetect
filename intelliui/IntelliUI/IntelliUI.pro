@@ -6,7 +6,7 @@
 
 QT       += core gui
 QT       += charts
-
+QT       += concurrent
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = IntelliUI

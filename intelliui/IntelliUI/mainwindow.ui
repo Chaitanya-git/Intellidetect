@@ -129,11 +129,19 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionLoad_network_from_file"/>
     <addaction name="actionTrain_from_file"/>
     <addaction name="actionTrain_for_current_input"/>
     <addaction name="actionView_training_statistics"/>
+    <addaction name="actionOptions"/>
    </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionNew_network"/>
+    <addaction name="actionLoad_network_from_file"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -170,6 +178,19 @@
   <action name="actionView_training_statistics">
    <property name="text">
     <string>View training statistics</string>
+   </property>
+  </action>
+  <action name="actionNew_network">
+   <property name="text">
+    <string>New network</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionOptions">
+   <property name="text">
+    <string>Options</string>
    </property>
   </action>
  </widget>

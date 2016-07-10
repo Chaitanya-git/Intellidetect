@@ -12,10 +12,10 @@ MAKEFILE      = Makefile
 
 CC            = gcc
 CXX           = g++
-DEFINES       = -DQT_QML_DEBUG -DQT_CHARTS_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB
+DEFINES       = -DQT_QML_DEBUG -DQT_CHARTS_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CONCURRENT_LIB -DQT_CORE_LIB
 CFLAGS        = -pipe -g -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 CXXFLAGS      = -pipe -std=c++11 -O3 -larmadillo -llapack -lopenblas -g -Wall -W -D_REENTRANT -fPIC $(DEFINES)
-INCPATH       = -I../../IntelliUI -I. -I/home/chaitanya/IntelliDetect\ 2.1/ -isystem /usr/include/qt -isystem /usr/include/qt/QtCharts -isystem /usr/include/qt/QtWidgets -isystem /usr/include/qt/QtGui -isystem /usr/include/qt/QtCore -I. -I. -I/usr/lib/qt/mkspecs/linux-g++
+INCPATH       = -I../../IntelliUI -I. -I/home/chaitanya/IntelliDetect\ 2.1/ -isystem /usr/include/qt -isystem /usr/include/qt/QtCharts -isystem /usr/include/qt/QtWidgets -isystem /usr/include/qt/QtGui -isystem /usr/include/qt/QtConcurrent -isystem /usr/include/qt/QtCore -I. -I. -I/usr/lib/qt/mkspecs/linux-g++
 QMAKE         = /usr/lib/qt/bin/qmake
 DEL_FILE      = rm -f
 CHK_DIR_EXISTS= test -d
@@ -36,7 +36,7 @@ DISTNAME      = IntelliUI1.0.0
 DISTDIR = /home/chaitanya/Development/IntelliDetect\ 2.1/intelliui/IntelliUI/build/.tmp/IntelliUI1.0.0
 LINK          = g++
 LFLAGS        = 
-LIBS          = $(SUBLIBS) -llapack -lblas -larmadillo -lQt5Charts -lQt5Widgets -lQt5Gui -lQt5Core -lGL -lpthread 
+LIBS          = $(SUBLIBS) -llapack -lblas -larmadillo -lQt5Charts -lQt5Widgets -lQt5Gui -lQt5Concurrent -lQt5Core -lGL -lpthread 
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -550,6 +550,7 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 		/usr/lib/libQt5Charts.prl \
 		/usr/lib/libQt5Widgets.prl \
 		/usr/lib/libQt5Gui.prl \
+		/usr/lib/libQt5Concurrent.prl \
 		/usr/lib/libQt5Core.prl
 	$(QMAKE) -spec linux-g++ CONFIG+=debug CONFIG+=qml_debug -o Makefile ../IntelliUI.pro
 /usr/lib/qt/mkspecs/features/spec_pre.prf:
@@ -796,6 +797,7 @@ Makefile: ../IntelliUI.pro /usr/lib/qt/mkspecs/linux-g++/qmake.conf /usr/lib/qt/
 /usr/lib/libQt5Charts.prl:
 /usr/lib/libQt5Widgets.prl:
 /usr/lib/libQt5Gui.prl:
+/usr/lib/libQt5Concurrent.prl:
 /usr/lib/libQt5Core.prl:
 qmake: FORCE
 	@$(QMAKE) -spec linux-g++ CONFIG+=debug CONFIG+=qml_debug -o Makefile ../IntelliUI.pro
@@ -844,7 +846,7 @@ compiler_moc_header_clean:
 	-$(DEL_FILE) moc_mainwindow.cpp
 moc_mainwindow.cpp: ../mainwindow.h \
 		/usr/lib/qt/bin/moc
-	/usr/lib/qt/bin/moc $(DEFINES) -I/usr/lib/qt/mkspecs/linux-g++ -I'/home/chaitanya/Development/IntelliDetect 2.1/intelliui/IntelliUI' -I'/home/chaitanya/IntelliDetect 2.1' -I/usr/include/qt -I/usr/include/qt/QtCharts -I/usr/include/qt/QtWidgets -I/usr/include/qt/QtGui -I/usr/include/qt/QtCore -I. -I/usr/include/c++/6.1.1 -I/usr/include/c++/6.1.1/x86_64-pc-linux-gnu -I/usr/include/c++/6.1.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/6.1.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/6.1.1/include-fixed -I/usr/include ../mainwindow.h -o moc_mainwindow.cpp
+	/usr/lib/qt/bin/moc $(DEFINES) -I/usr/lib/qt/mkspecs/linux-g++ -I'/home/chaitanya/Development/IntelliDetect 2.1/intelliui/IntelliUI' -I'/home/chaitanya/IntelliDetect 2.1' -I/usr/include/qt -I/usr/include/qt/QtCharts -I/usr/include/qt/QtWidgets -I/usr/include/qt/QtGui -I/usr/include/qt/QtConcurrent -I/usr/include/qt/QtCore -I. -I/usr/include/c++/6.1.1 -I/usr/include/c++/6.1.1/x86_64-pc-linux-gnu -I/usr/include/c++/6.1.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/6.1.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/6.1.1/include-fixed -I/usr/include ../mainwindow.h -o moc_mainwindow.cpp
 
 compiler_moc_source_make_all:
 compiler_moc_source_clean:

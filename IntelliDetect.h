@@ -334,7 +334,7 @@ mat ReLU::randInitWeights(int Lin, int Lout){
     return randu(Lin,Lout)*(2*epsilon) - epsilon;
 }
 
-class ConvNet :public ReLU{
+class ConvNet :public network{
         mat m_X,m_Y;
         int m_imgHt,m_imgWth, m_strideLn;
         vector<int> m_convSizes;

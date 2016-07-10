@@ -31,6 +31,8 @@ public:
     QAction *actionTrain_for_current_input;
     QAction *actionLoad_network_from_file;
     QAction *actionView_training_statistics;
+    QAction *actionNew_network;
+    QAction *actionOptions;
     QWidget *centralWidget;
     QLabel *result_label;
     QLabel *confidence_label;
@@ -41,6 +43,7 @@ public:
     QLabel *confidence_val_label;
     QMenuBar *menuBar;
     QMenu *menuOptions;
+    QMenu *menuFile;
     QStatusBar *statusBar;
 
     void setupUi(QMainWindow *MainWindow)
@@ -59,6 +62,10 @@ public:
         actionLoad_network_from_file->setShortcutContext(Qt::ApplicationShortcut);
         actionView_training_statistics = new QAction(MainWindow);
         actionView_training_statistics->setObjectName(QStringLiteral("actionView_training_statistics"));
+        actionNew_network = new QAction(MainWindow);
+        actionNew_network->setObjectName(QStringLiteral("actionNew_network"));
+        actionOptions = new QAction(MainWindow);
+        actionOptions->setObjectName(QStringLiteral("actionOptions"));
         centralWidget = new QWidget(MainWindow);
         centralWidget->setObjectName(QStringLiteral("centralWidget"));
         result_label = new QLabel(centralWidget);
@@ -92,16 +99,21 @@ public:
         menuBar->setGeometry(QRect(0, 0, 1024, 22));
         menuOptions = new QMenu(menuBar);
         menuOptions->setObjectName(QStringLiteral("menuOptions"));
+        menuFile = new QMenu(menuBar);
+        menuFile->setObjectName(QStringLiteral("menuFile"));
         MainWindow->setMenuBar(menuBar);
         statusBar = new QStatusBar(MainWindow);
         statusBar->setObjectName(QStringLiteral("statusBar"));
         MainWindow->setStatusBar(statusBar);
 
+        menuBar->addAction(menuFile->menuAction());
         menuBar->addAction(menuOptions->menuAction());
-        menuOptions->addAction(actionLoad_network_from_file);
         menuOptions->addAction(actionTrain_from_file);
         menuOptions->addAction(actionTrain_for_current_input);
         menuOptions->addAction(actionView_training_statistics);
+        menuOptions->addAction(actionOptions);
+        menuFile->addAction(actionNew_network);
+        menuFile->addAction(actionLoad_network_from_file);
 
         retranslateUi(MainWindow);
 
@@ -117,6 +129,9 @@ public:
         actionLoad_network_from_file->setText(QApplication::translate("MainWindow", "Load network from file", 0));
         actionLoad_network_from_file->setShortcut(QApplication::translate("MainWindow", "Ctrl+L", 0));
         actionView_training_statistics->setText(QApplication::translate("MainWindow", "View training statistics", 0));
+        actionNew_network->setText(QApplication::translate("MainWindow", "New network", 0));
+        actionNew_network->setShortcut(QApplication::translate("MainWindow", "Ctrl+N", 0));
+        actionOptions->setText(QApplication::translate("MainWindow", "Options", 0));
         result_label->setText(QApplication::translate("MainWindow", "Result : ", 0));
         confidence_label->setText(QApplication::translate("MainWindow", "Confidence : ", 0));
         load_btn->setText(QApplication::translate("MainWindow", "Load Image", 0));
@@ -125,6 +140,7 @@ public:
         result_val_label->setText(QString());
         confidence_val_label->setText(QString());
         menuOptions->setTitle(QApplication::translate("MainWindow", "Tools", 0));
+        menuFile->setTitle(QApplication::translate("MainWindow", "File", 0));
     } // retranslateUi
 
 };
