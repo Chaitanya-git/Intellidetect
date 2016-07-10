@@ -15,8 +15,8 @@ class network{
         string m_paramPath;
         vector<string> m_inpPaths;
     public:
-        mat trainSetCostsReg;
-        mat trainSetCosts;
+        vector<long double> trainSetCostsReg;
+        vector<long double> trainSetCosts;
 
         network(string, int, int, int);
         mat activation(mat);
@@ -200,10 +200,10 @@ mat network::backpropogate(mat Inputs, mat Outputs, double lambda){
         output_tmp(as_scalar(Outputs(i)),0) = 0;
     }
     cout<<"\tCost(unregularized) = "<<cost;
-    trainSetCosts<<cost;
+    trainSetCosts.push_back(cost);
     cost += (accu(square(Theta1.cols(1,Theta1.n_cols-1)))+accu(square(Theta2.cols(1,m_hiddenLayerSize))))*lambda/(2*InputSize);
     cout<<"\t\tCost (regularized) = "<<cost<<endl;
-    trainSetCostsReg<<cost;
+    trainSetCostsReg.push_back(cost);
     Theta1_grad /= InputSize;
     Theta2_grad /= InputSize;
 

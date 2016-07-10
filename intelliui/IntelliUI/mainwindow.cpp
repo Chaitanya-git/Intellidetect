@@ -1,9 +1,12 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "QFileDialog"
+#include <QtCharts>
 #include <QInputDialog>
 #include <IntelliDetect.h>
 #include <armadillo>
+
+using namespace QtCharts;
 
 QString fileName;
 ReLU* net = new ReLU();
@@ -84,4 +87,29 @@ void MainWindow::on_actionLoad_network_from_file_triggered()
         string param = net_params.toUtf8().constData();
         net = new ReLU(param);
     }
+}
+
+void MainWindow::on_actionView_training_statistics_triggered()
+{
+    if(!net->trainSetCostsReg.size()){
+        QMessageBox noStatMsg;
+        noStatMsg.setText("No statistics available");
+        noStatMsg.exec();
+        return;
+    }
+    QLineSeries *series = new QLineSeries();
+    for(unsigned int i=0;i<net->trainSetCostsReg.size();++i){
+        *series << QPointF(i+1,net->trainSetCostsReg.at(i));
+    }
+
+    QChart *chart = new QChart();
+    chart->addSeries(series);
+    chart->setTitle("Cost vs Number of Iterations");
+    chart->createDefaultAxes();
+    chart->axisX()->setRange(0,(unsigned long long)(net->trainSetCostsReg.size()+10));
+    chart->axisY()->setRange(0,(unsigned long long)(*(std::max_element(net->trainSetCostsReg.begin(),net->trainSetCostsReg.end()))));
+    QChartView *chartView = new QChartView(chart);
+    chartView->setRenderHint(QPainter::Antialiasing);
+    chartView->resize(1024,768);
+    chartView->show();
 }
