@@ -7,9 +7,10 @@
 #include <armadillo>
 
 using namespace QtCharts;
+using IntelliDetect::network;
 
 QString fileName;
-ReLU* net = new ReLU();
+network* net = new network(IntelliDetect::sigmoid, IntelliDetect::sigmoidGradient);
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -60,8 +61,10 @@ void MainWindow::on_actionTrain_from_file_triggered()
     fileNames.push_back(test_set.toUtf8().constData());
     if(!csv_files.isEmpty()){
         if(net->getPath().empty()){
-            QString param_path = QFileDialog::getSaveFileName(this, tr("Choose file to save data"),"",tr("Network Parameter files (*.CSV)"));
-            net = new ReLU(param_path.toUtf8().constData());
+            QString param_path = QFileDialog::getSaveFileName(this, tr("Choose file to save data"),"",tr("Network Parameter files (*.csv)"));
+            net = new network(IntelliDetect::RectifiedLinearUnitActivation,
+                              IntelliDetect::RectifiedLinearUnitActivationGradient,
+                              param_path.toUtf8().constData());
         }
         net->load(fileNames);
         net->train();
@@ -77,10 +80,12 @@ void MainWindow::on_actionTrain_for_current_input_triggered()
 
 void MainWindow::on_actionLoad_network_from_file_triggered()
 {
-    QString net_params = QFileDialog::getOpenFileName(this, tr("Select network file"),"",tr("Network parameter files (*.CSV)"));
+    QString net_params = QFileDialog::getOpenFileName(this, tr("Select network file"),"",tr("Network parameter files (*.csv)"));
     if(!net_params.isEmpty()){
         string param = net_params.toUtf8().constData();
-        net = new ReLU(param);
+        net = new network(IntelliDetect::RectifiedLinearUnitActivation,
+                       IntelliDetect::RectifiedLinearUnitActivationGradient,
+                       param);
     }
 }
 
@@ -111,5 +116,6 @@ void MainWindow::on_actionView_training_statistics_triggered()
 
 void MainWindow::on_actionNew_network_triggered()
 {
-    net = new ReLU();
+    net = new network(IntelliDetect::RectifiedLinearUnitActivation,
+                      IntelliDetect::RectifiedLinearUnitActivationGradient);
 }
