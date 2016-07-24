@@ -67,7 +67,7 @@ void MainWindow::on_actionTrain_from_file_triggered()
                               param_path.toUtf8().constData());
         }
         net->load(fileNames);
-        net->train();
+        net->train(0.0,1.0);
     }
 }
 

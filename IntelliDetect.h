@@ -46,6 +46,7 @@ namespace IntelliDetect{
             mat output(string);
             mat output(mat);
             mat backpropogate(mat, mat, double);
+            mat numericalGradient(mat);
             void train(double, double, double);
             void train(string, int, double, double, double);
             bool load(vector<string>, int, int);
@@ -54,6 +55,11 @@ namespace IntelliDetect{
             double accuracy(mat&, mat&);
             string getPath();
     };
+
+    mat network::numericalGradient(mat z){
+        double h = 1e-10;
+        return (activation(z+h)-activation(z))/h;
+    }
 
     network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
         m_inputLayerSize = inpSize;
@@ -146,7 +152,7 @@ namespace IntelliDetect{
         Input = join_horiz(ones<mat>(InputSize,1),Input);
         mat z2 = Input*trans(m_Theta1);
         mat h1 = join_horiz(ones<mat>(z2.n_rows,1),activation(z2));
-        mat h2 = activation(h1*trans(m_Theta2));
+        mat h2 = sigmoid(h1*trans(m_Theta2));
         mat pred = zeros(InputSize,1);
         for(int i=0; i<InputSize; ++i){
             pred(i) = h2.row(i).index_max();
@@ -158,7 +164,7 @@ namespace IntelliDetect{
         Input = join_horiz(ones<mat>(InputSize,1),Input);
         mat z2 = Input*trans(m_Theta1);
         mat h1 = join_horiz(ones<mat>(z2.n_rows,1),activation(z2));
-        mat h2 = activation(h1*trans(m_Theta2));
+        mat h2 = sigmoid(h1*trans(m_Theta2));
         mat pred = zeros(InputSize,1);
         cout<<"Output: "<<h2<<endl;
         cout<<"Sum of outputs"<<accu(h2)<<endl;
@@ -197,14 +203,15 @@ namespace IntelliDetect{
             mat a2 = activation(z2);
             a2 = join_vert(ones<mat>(1,1),a2);
             mat z3 = Theta2*a2;
-            mat a3 = activation(z3);
+            mat a3 = sigmoid(z3);
             output_tmp(as_scalar(Outputs(i))) = 1;
 
             cost += as_scalar(accu(output_tmp%log(a3)+(1-output_tmp)%log(1-a3)))/InputSize*(-1);
 
             mat delta_3 = a3-output_tmp;
             mat delta_2 = trans(Theta2.cols(1,Theta2.n_cols-1))*delta_3%activationGradient(z2);
-
+            mat delta_2_check = trans(Theta2.cols(1,Theta2.n_cols-1))*delta_3%numericalGradient(z2);
+            cout<<"Diff in activation grad and num_grad: "<<accu(delta_2-delta_2_check)<<endl;
             Theta1_grad += delta_2*CurrentInput.t();
             Theta2_grad += delta_3*a2.t();
             output_tmp(as_scalar(Outputs(i)),0) = 0;
