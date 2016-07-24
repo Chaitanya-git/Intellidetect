@@ -10,23 +10,16 @@ using namespace std;
 
 namespace IntelliDetect{
     mat sigmoid(mat z){
-        return 1.0/(1.0 + exp(-z)); //Sigmoid Function
+        return 1.0/(1.0 + exp(-z));
     }
 
-    mat sigmoidGradient(mat z){ //Derivative of the sigmoid function
+    mat sigmoidGradient(mat z){
         mat g = sigmoid(z);
         return g%(1-g);         // '%'is the overloaded element wise multiplication operator.
     }
 
     mat RectifiedLinearUnitActivation(mat z){
-        cout<<"Size of input = "<<z.n_rows<<"x"<<z.n_cols;
-        mat act = zeros(z.n_rows,1);
-        for(unsigned int i=0;i<z.n_rows;++i){
-            if(z(i,0)>0)
-                act(i,1) = z(i,1);
-        }
-        cout<<"Size of act = "<<act.n_rows<<"x"<<act.n_cols;
-        return act;
+        return log(1+exp(z));
     }
 
     mat RectifiedLinearUnitActivationGradient(mat z){
@@ -160,10 +153,8 @@ namespace IntelliDetect{
         mat h1 = join_horiz(ones<mat>(z2.n_rows,1),activation(z2));
         mat h2 = activation(h1*trans(m_Theta2));
         mat pred = zeros(InputSize,1);
-        uword index;
         for(int i=0; i<InputSize; ++i){
-            h2.row(i).max(index);
-            pred(i) = index;
+            pred(i) = h2.row(i).index_max();
         }
         return pred;
     }
