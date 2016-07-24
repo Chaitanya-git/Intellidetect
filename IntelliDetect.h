@@ -19,16 +19,11 @@ namespace IntelliDetect{
     }
 
     mat RectifiedLinearUnitActivation(mat z){
-        return log(1+exp(z));
+        return (z+abs(z))/2;
     }
 
     mat RectifiedLinearUnitActivationGradient(mat z){
-        mat grad = zeros(z.n_rows,1);
-        for(unsigned int i=0;i<z.n_rows;++i){
-            if(z(i,0)>0)
-                grad(i,0) = 1;
-        }
-        return grad;
+        return (z+abs(z))/(2*z);
     }
 
     class network{
