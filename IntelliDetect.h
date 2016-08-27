@@ -2,6 +2,9 @@
 #define INTELLIDETECT_H_INCLUDED
 #include <armadillo>
 #include <cstring>
+#include <string>
+#include <list>
+#include <utility>
 
 /* This header file contains definitions for functions for handling various ANN processes */
 
@@ -9,6 +12,69 @@ using namespace arma;
 using namespace std;
 
 namespace IntelliDetect{
+
+    struct propertyTree{
+            string data;
+            list< pair<string, propertyTree> > childNodes;
+        public:
+            //TODO:
+            //propertyTree(string);
+            string getProperty(string);
+            void setProperty(string,string);
+            bool isSet(string);
+    };
+
+    void propertyTree::setProperty(string property, string value){
+        bool flag=false;
+        string nodeName,propName;
+        for(unsigned int i=0;i<property.length();++i){
+            if(property[i]=='.'){
+                flag=true;
+                ++i;
+            }
+            if(flag)
+                propName.append(&property[i],1);
+            else
+                nodeName.append(&property[i],1);
+        }
+        for(auto prop: childNodes){
+            if(!get<0>(prop).compare(nodeName)){
+                get<1>(prop).setProperty(propName,value);
+                return;
+            }
+        }
+        childNodes.push_back(make_pair(nodeName,*(new propertyTree)));
+        if(propName.length()){
+            get<1>(childNodes.back()).setProperty(propName,value);
+            return;
+        }
+        else
+            get<1>(childNodes.back()).data = value;
+        cout<<"Property set"<<endl;
+    }
+
+    string propertyTree::getProperty(string property){
+        bool flag=false;
+        string nodeName,propName;
+        for(unsigned int i=0;i<property.length();++i){
+            if(property[i]=='.'){
+                flag=true;
+                ++i;
+            }
+            if(flag)
+                propName.append(&property[i],1);
+            else
+                nodeName.append(&property[i],1);
+        }
+        for(auto prop: childNodes){
+            if(!get<0>(prop).compare(nodeName)){
+                return get<1>(prop).getProperty(propName);
+
+            }
+        }
+        return data;
+    }
+
     mat sigmoid(mat z){
         return 1.0/(1.0 + exp(-z));
     }
@@ -34,6 +100,7 @@ namespace IntelliDetect{
             vector<string> m_inpPaths;
             mat (*activation)(mat);
             mat (*activationGradient)(mat);
+            propertyTree properties;
 
         public:
 
@@ -62,6 +129,8 @@ namespace IntelliDetect{
     }
 
     network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
+        properties.setProperty("Network.inputLayerSize",to_string(inpSize));
+        cout<<properties.getProperty("Network.inputLayerSize");
         m_inputLayerSize = inpSize;
         m_hiddenLayerSize = HdSize;
         m_outputLayerSize = OpSize;
