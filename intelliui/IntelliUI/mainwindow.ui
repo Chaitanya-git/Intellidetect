@@ -122,7 +122,7 @@
      <x>0</x>
      <y>0</y>
      <width>1024</width>
-     <height>22</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuOptions">
@@ -136,10 +136,11 @@
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>Fi&amp;le</string>
     </property>
     <addaction name="actionNew_network"/>
     <addaction name="actionLoad_network_from_file"/>
+    <addaction name="actionSave"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -166,7 +167,7 @@
   </action>
   <action name="actionLoad_network_from_file">
    <property name="text">
-    <string>Load network from file</string>
+    <string>&amp;Load network from file</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>
@@ -177,12 +178,12 @@
   </action>
   <action name="actionView_training_statistics">
    <property name="text">
-    <string>View training statistics</string>
+    <string>&amp;View training statistics</string>
    </property>
   </action>
   <action name="actionNew_network">
    <property name="text">
-    <string>New network</string>
+    <string>&amp;New network</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
@@ -190,7 +191,18 @@
   </action>
   <action name="actionOptions">
    <property name="text">
-    <string>Options</string>
+    <string>&amp;Options</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+   <property name="toolTip">
+    <string>Save network</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
  </widget>

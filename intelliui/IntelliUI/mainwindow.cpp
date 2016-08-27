@@ -119,3 +119,9 @@ void MainWindow::on_actionNew_network_triggered()
     net = new network(IntelliDetect::RectifiedLinearUnitActivation,
                       IntelliDetect::RectifiedLinearUnitActivationGradient);
 }
+
+void MainWindow::on_actionSave_triggered()
+{
+    QString param_path = QFileDialog::getExistingDirectory(this, tr("Choose location to save data"));
+    net->save(param_path.toUtf8().data());
+}

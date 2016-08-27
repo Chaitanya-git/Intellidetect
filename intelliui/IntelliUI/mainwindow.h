@@ -27,6 +27,8 @@ private slots:
 
     void on_actionNew_network_triggered();
 
+    void on_actionSave_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

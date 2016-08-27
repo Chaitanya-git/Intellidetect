@@ -3,9 +3,10 @@
 #include <armadillo>
 #include <cstring>
 #include <string>
-#include <list>
+#include <vector>
 #include <utility>
-
+#include <ctime>
+#define INTELLI_VERSION "2.2"
 /* This header file contains definitions for functions for handling various ANN processes */
 
 using namespace arma;
@@ -15,13 +16,14 @@ namespace IntelliDetect{
 
     struct propertyTree{
             string data;
-            list< pair<string, propertyTree> > childNodes;
+            vector< pair<string, propertyTree> > childNodes;
         public:
             //TODO:
             //propertyTree(string);
             string getProperty(string);
             void setProperty(string,string);
             bool isSet(string);
+            string toString(int);
     };
 
     void propertyTree::setProperty(string property, string value){
@@ -75,6 +77,44 @@ namespace IntelliDetect{
         return data;
     }
 
+    bool propertyTree::isSet(string property){
+        bool flag=false;
+        string nodeName,propName;
+        for(unsigned int i=0;i<property.length();++i){
+            if(property[i]=='.'){
+                flag=true;
+                ++i;
+            }
+            if(flag)
+                propName.append(&property[i],1);
+            else
+                nodeName.append(&property[i],1);
+        }
+        for(auto prop: childNodes){
+            if(!get<0>(prop).compare(nodeName)){
+                if(propName.length())
+                    return get<1>(prop).isSet(propName);
+                else
+                    return true;
+
+            }
+        }
+        return false;
+    }
+
+    string propertyTree::toString(int level=0){
+        string strRep("");
+        if(!level){
+            strRep+=string("version = ");
+        }
+        strRep+=(data+string("\n"));
+        for(auto prop: childNodes){
+            for(int i=0;i<level;++i)
+                strRep+=string("\t");
+            strRep+=(get<0>(prop) + string(" = ") + get<1>(prop).toString(level+1));
+        }
+        return strRep;
+    }
     mat sigmoid(mat z){
         return 1.0/(1.0 + exp(-z));
     }
@@ -119,6 +159,7 @@ namespace IntelliDetect{
             bool load(vector<string>, int, int);
             bool load(string, int, int);
             bool load(mat&,mat&);
+            bool save(string);
             double accuracy(mat&, mat&);
             string getPath();
     };
@@ -129,8 +170,11 @@ namespace IntelliDetect{
     }
 
     network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
-        properties.setProperty("Network.inputLayerSize",to_string(inpSize));
-        cout<<properties.getProperty("Network.inputLayerSize");
+        properties.data = string("Version ")+string(INTELLI_VERSION);
+        properties.setProperty("inputLayerSize",to_string(inpSize));
+        properties.setProperty("hiddenLayerSize",to_string(HdSize));
+        properties.setProperty("outputLayerSize",to_string(OpSize));
+        properties.setProperty("Id","TestNetwork");
         m_inputLayerSize = inpSize;
         m_hiddenLayerSize = HdSize;
         m_outputLayerSize = OpSize;
@@ -208,6 +252,45 @@ namespace IntelliDetect{
         m_X = Inputs;
         m_Y = Labels;
 
+        return true;
+    }
+
+    bool network::save(string path){
+        //Construct path
+        string fullpath("");
+        fullpath += path;
+        if(path.back()!='/')
+            fullpath.append("/",1);
+        string folderName;
+        time_t Time;
+        if(properties.isSet("Id"))
+            folderName = string(properties.getProperty("Id"));
+        else{
+            time(&Time);
+            folderName = string("network")+string(asctime(localtime(&Time))+string("/"));
+        }
+        fullpath += folderName;
+        fstream trainStat;
+        //Save training stats
+        trainStat.open(fullpath+string("trainingStats.csv"),ios::out);
+        for(int i=0;i<trainSetCosts.size();++i){
+            trainStat<<trainSetCosts[i]<<", "<<trainSetCostsReg[i]<<", "<<endl;
+        }
+        trainStat.close();
+        //Save weights
+        mat hyper_params = {
+                            static_cast<double>(m_inputLayerSize),
+                            static_cast<double>(m_hiddenLayerSize),
+                            static_cast<double>(m_outputLayerSize)
+                           };
+        mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
+        tmp_params.save((fullpath+string("parameters.csv")),csv_ascii);
+        //Save propertyTree
+        fstream configFile;
+        configFile.open(fullpath+string("network.conf"),ios::out);
+        configFile<<string("//Intellidetect Configuration file");
+        configFile<<properties.toString();
+        configFile.close();
         return true;
     }
 
@@ -334,13 +417,7 @@ namespace IntelliDetect{
         }
         else
             cout<<"No training set provided."<<endl;
-        mat hyper_params = {
-                            static_cast<double>(m_inputLayerSize),
-                            static_cast<double>(m_hiddenLayerSize),
-                            static_cast<double>(m_outputLayerSize)
-                           };
-        mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
-        tmp_params.save(m_paramPath,csv_ascii);
+        save(m_paramPath);
     }
 
     void network::train(string input, int label, double lambda = 0.5,double alpha = 0.05,double mu = 1){//regularization parameter and learning rate and a momentum constant
@@ -371,13 +448,7 @@ namespace IntelliDetect{
         cout<<"Done training on given example."<<endl;
         cout<<"Overall Prediction Accuracy after training: "<<accuracy(X, Y)<<endl<<endl;
 
-        mat hyper_params = {
-                            static_cast<double>(m_inputLayerSize),
-                            static_cast<double>(m_hiddenLayerSize),
-                            static_cast<double>(m_outputLayerSize)
-                           };
-        mat tmp_params = join_vert(vectorise(hyper_params),m_nn_params);
-        tmp_params.save("parameters3.csv",csv_ascii);
+        save(m_paramPath);
     }
 
     double network::accuracy(mat &X, mat &Y){
