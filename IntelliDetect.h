@@ -7,6 +7,7 @@
 #include <utility>
 #include <ctime>
 #define INTELLI_VERSION "2.2"
+
 /* This header file contains definitions for functions for handling various ANN processes */
 
 using namespace arma;
@@ -41,18 +42,18 @@ namespace IntelliDetect{
         }
         for(int i=0;i<childNodes.size();++i){
             if(!get<0>(childNodes[i]).compare(nodeName)){
-                get<1>(childNodes[i]).setProperty(propName,value);
+                if(propName.length())
+                    get<1>(childNodes[i]).setProperty(propName,value);
+                else
+                    get<1>(childNodes[i]).data = value;
                 return;
             }
         }
         childNodes.push_back(make_pair(nodeName,*(new propertyTree)));
-        if(propName.length()){
+        if(propName.length())
             get<1>(childNodes.back()).setProperty(propName,value);
-            return;
-        }
         else
             get<1>(childNodes.back()).data = value;
-        cout<<"Property set"<<endl;
     }
 
     string propertyTree::getProperty(string property){
@@ -172,9 +173,10 @@ namespace IntelliDetect{
     network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
         properties.data = string("Version ")+string(INTELLI_VERSION);
         properties.setProperty("Id","TestNetwork");
-        properties.setProperty("Network.inputLayerSize",to_string(inpSize));
-        properties.setProperty("Network.hiddenLayerSize",to_string(HdSize));
-        properties.setProperty("Network.outputLayerSize",to_string(OpSize));
+        properties.setProperty("LayerCount",to_string(3));
+        properties.setProperty("Layers.inputLayerSize",to_string(inpSize));
+        properties.setProperty("Layers.hiddenLayerSize",to_string(HdSize));
+        properties.setProperty("Layers.outputLayerSize",to_string(OpSize));
 
         m_inputLayerSize = inpSize;
         m_hiddenLayerSize = HdSize;
@@ -385,6 +387,9 @@ namespace IntelliDetect{
     }
 
     void network::train(double lambda = 0.5,double alpha = 0.05,double mu = 1){//regularization parameter and learning rate and a momentum constant
+        properties.setProperty("HyperParamaters.RegularizationParameter",to_string(lambda));
+        properties.setProperty("HyperParamaters.LearningRate",to_string(alpha));
+        properties.setProperty("HyperParamaters.momentumConstant",to_string(mu));
         int Total = m_X.n_rows, batch_size = m_X.n_rows/100, IterCnt = 35;
         if(!batch_size){
             batch_size = 1;
@@ -422,7 +427,9 @@ namespace IntelliDetect{
     }
 
     void network::train(string input, int label, double lambda = 0.5,double alpha = 0.05,double mu = 1){//regularization parameter and learning rate and a momentum constant
-
+        properties.setProperty("HyperParamaters.RegularizationParameter",to_string(lambda));
+        properties.setProperty("HyperParamaters.LearningRate",to_string(alpha));
+        properties.setProperty("HyperParamaters.momentumConstant",to_string(mu));
 
         cout<<"\n\tStarting individual training.\n\n";
 
