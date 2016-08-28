@@ -28,7 +28,7 @@ namespace IntelliDetect{
 
     void propertyTree::setProperty(string property, string value){
         bool flag=false;
-        string nodeName,propName;
+        string nodeName(""),propName("");
         for(unsigned int i=0;i<property.length();++i){
             if(property[i]=='.'){
                 flag=true;
@@ -39,9 +39,9 @@ namespace IntelliDetect{
             else
                 nodeName.append(&property[i],1);
         }
-        for(auto prop: childNodes){
-            if(!get<0>(prop).compare(nodeName)){
-                get<1>(prop).setProperty(propName,value);
+        for(int i=0;i<childNodes.size();++i){
+            if(!get<0>(childNodes[i]).compare(nodeName)){
+                get<1>(childNodes[i]).setProperty(propName,value);
                 return;
             }
         }
@@ -171,10 +171,11 @@ namespace IntelliDetect{
 
     network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
         properties.data = string("Version ")+string(INTELLI_VERSION);
-        properties.setProperty("inputLayerSize",to_string(inpSize));
-        properties.setProperty("hiddenLayerSize",to_string(HdSize));
-        properties.setProperty("outputLayerSize",to_string(OpSize));
         properties.setProperty("Id","TestNetwork");
+        properties.setProperty("Network.inputLayerSize",to_string(inpSize));
+        properties.setProperty("Network.hiddenLayerSize",to_string(HdSize));
+        properties.setProperty("Network.outputLayerSize",to_string(OpSize));
+
         m_inputLayerSize = inpSize;
         m_hiddenLayerSize = HdSize;
         m_outputLayerSize = OpSize;
@@ -288,7 +289,7 @@ namespace IntelliDetect{
         //Save propertyTree
         fstream configFile;
         configFile.open(fullpath+string("network.conf"),ios::out);
-        configFile<<string("//Intellidetect Configuration file");
+        configFile<<string("//Intellidetect Configuration file\n");
         configFile<<properties.toString();
         configFile.close();
         return true;
