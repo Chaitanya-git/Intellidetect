@@ -4,8 +4,10 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <stack>
 #include <utility>
 #include <ctime>
+#include <sys/stat.h>
 #define INTELLI_VERSION "2.2"
 
 /* This header file contains definitions for functions for handling various ANN processes */
@@ -40,7 +42,7 @@ namespace IntelliDetect{
             else
                 nodeName.append(&property[i],1);
         }
-        for(int i=0;i<childNodes.size();++i){
+        for(unsigned int i=0;i<childNodes.size();++i){
             if(!get<0>(childNodes[i]).compare(nodeName)){
                 if(propName.length())
                     get<1>(childNodes[i]).setProperty(propName,value);
@@ -148,6 +150,8 @@ namespace IntelliDetect{
             vector<long double> trainSetCostsReg;
             vector<long double> trainSetCosts;
             network(mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat),string, int, int, int);
+            network(string);
+            network(propertyTree);
             mat randInitWeights(int, int);
             mat predict(mat);
             mat predict(string);
@@ -202,6 +206,65 @@ namespace IntelliDetect{
         cout<<"Weights Initialized"<<endl;
         trainSetCosts.resize(0);
         trainSetCostsReg.resize(0);
+    }
+
+    network::network(string path){
+        if(path.back()!='/')
+            path.append("/",1);
+        //construct property tree
+        fstream prop;
+        prop.open(path+string("network.conf"),ios::in);
+        string line;
+        vector<string> prevProps;
+        unsigned int level = 0;
+        do{
+            getline(prop, line);
+            if(line[0]=='/' && line[1] == '/')
+                continue;
+            string propName,value;
+            bool flag = false;
+            for(unsigned int i=0;i<line.length();++i){
+                if(line[i]==' ') continue;
+                if(line[i]== '='){
+                    flag = true;
+                    continue;
+                }
+                if(flag)
+                    value.append(&line[i],1);
+                else if(line[i]!='\t')
+                    propName.append(&line[i],1);
+                else
+                    ++level;
+            }
+            if(!value.length())
+                if(level>=prevProps.size())
+                    prevProps.push_back(propName);
+                else
+                    prevProps[level] = propName;
+            else{
+                for(unsigned int i=level-1;i<prevProps.size();--i)
+                    propName = (prevProps[i]+string(".")+propName);
+                if(!propName.compare("version"))
+                    properties.data = value;
+                else
+                    properties.setProperty(propName,value);
+                level=0;
+            }
+        }while(!prop.eof());
+
+        m_nn_params.load(path+string("parameters.csv"));
+
+        fstream &trainStat=prop;
+        trainStat.open(path+string("trainingStats.csv"),ios::in);
+        float trainSetCost,trainSetCostReg;
+        char ch;
+        while(!trainStat.eof()){
+            trainStat>>trainSetCost>>ch>>ch>>trainSetCostReg>>ch>>ch>>ch;
+            trainSetCosts.push_back(trainSetCost);
+            trainSetCostsReg.push_back(trainSetCostReg);
+        }
+
+        trainStat.close();
     }
 
     bool network::load(vector<string> paths, int startInd=0, int endInd=0){
@@ -270,13 +333,14 @@ namespace IntelliDetect{
             folderName = string(properties.getProperty("Id"));
         else{
             time(&Time);
-            folderName = string("network")+string(asctime(localtime(&Time))+string("/"));
+            folderName = string("network ")+string(asctime(localtime(&Time)));
         }
-        fullpath += folderName;
+        fullpath += folderName+string("/");
+        mkdir(fullpath.c_str(),0755);
         fstream trainStat;
         //Save training stats
         trainStat.open(fullpath+string("trainingStats.csv"),ios::out);
-        for(int i=0;i<trainSetCosts.size();++i){
+        for(unsigned int i=0;i<trainSetCosts.size();++i){
             trainStat<<trainSetCosts[i]<<", "<<trainSetCostsReg[i]<<", "<<endl;
         }
         trainStat.close();

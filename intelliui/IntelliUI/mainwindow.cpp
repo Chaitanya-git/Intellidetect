@@ -80,12 +80,10 @@ void MainWindow::on_actionTrain_for_current_input_triggered()
 
 void MainWindow::on_actionLoad_network_from_file_triggered()
 {
-    QString net_params = QFileDialog::getOpenFileName(this, tr("Select network file"),"",tr("Network parameter files (*.csv)"));
+    QString net_params = QFileDialog::getExistingDirectory(this, tr("Select network folder"));
     if(!net_params.isEmpty()){
         string param = net_params.toUtf8().constData();
-        net = new network(IntelliDetect::RectifiedLinearUnitActivation,
-                       IntelliDetect::RectifiedLinearUnitActivationGradient,
-                       param);
+        net = new network(param);
     }
 }
 
