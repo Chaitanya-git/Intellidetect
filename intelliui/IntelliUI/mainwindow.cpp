@@ -8,6 +8,7 @@
 
 using namespace QtCharts;
 using IntelliDetect::network;
+using IntelliDetect::propertyTree;
 
 QString fileName;
 network* net = new network(IntelliDetect::sigmoid, IntelliDetect::sigmoidGradient);
@@ -62,12 +63,18 @@ void MainWindow::on_actionTrain_from_file_triggered()
     if(!csv_files.isEmpty()){
         if(net->getPath().empty()){
             QString param_path = QFileDialog::getExistingDirectory(this, tr("Choose location to save data"));
-            net = new network(IntelliDetect::RectifiedLinearUnitActivation,
-                              IntelliDetect::RectifiedLinearUnitActivationGradient,
-                              param_path.toUtf8().constData());
+            QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
+            propertyTree prop;
+            prop.data = string(INTELLI_VERSION);
+            prop.setProperty("Id",Id.toUtf8().toStdString());
+            prop.setProperty("layers.inputLayerSize","784");
+            prop.setProperty("layers.hiddenLayerSize","100");
+            prop.setProperty("layers.outputLayerSize","10");
+            prop.setProperty("saveLocation", param_path.toUtf8().toStdString());
+            net = new network(prop);
         }
         net->load(fileNames);
-        net->train(1.0,0.001);
+        net->train();
     }
 }
 
@@ -114,8 +121,14 @@ void MainWindow::on_actionView_training_statistics_triggered()
 
 void MainWindow::on_actionNew_network_triggered()
 {
-    net = new network(IntelliDetect::RectifiedLinearUnitActivation,
-                      IntelliDetect::RectifiedLinearUnitActivationGradient);
+    QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
+    propertyTree prop;
+    prop.data = string(INTELLI_VERSION);
+    prop.setProperty("Id",Id.toUtf8().toStdString());
+    prop.setProperty("layers.inputLayerSize","784");
+    prop.setProperty("layers.hiddenLayerSize","100");
+    prop.setProperty("layers.outputLayerSize","10");
+    net = new network(prop);
 }
 
 void MainWindow::on_actionSave_triggered()
