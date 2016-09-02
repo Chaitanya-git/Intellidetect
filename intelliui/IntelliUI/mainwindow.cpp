@@ -61,13 +61,13 @@ void MainWindow::on_actionTrain_from_file_triggered()
     fileNames.push_back(test_set.toUtf8().constData());
     if(!csv_files.isEmpty()){
         if(net->getPath().empty()){
-            QString param_path = QFileDialog::getSaveFileName(this, tr("Choose file to save data"),"",tr("Network Parameter files (*.csv)"));
+            QString param_path = QFileDialog::getExistingDirectory(this, tr("Choose location to save data"));
             net = new network(IntelliDetect::RectifiedLinearUnitActivation,
                               IntelliDetect::RectifiedLinearUnitActivationGradient,
                               param_path.toUtf8().constData());
         }
         net->load(fileNames);
-        net->train(0.0,1.0);
+        net->train(1.0,0.001);
     }
 }
 

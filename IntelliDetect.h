@@ -21,14 +21,59 @@ namespace IntelliDetect{
             string data;
             vector< pair<string, propertyTree> > childNodes;
         public:
-            //TODO:
-            //propertyTree(string);
+            bool load(string);
             string getProperty(string);
             void setProperty(string,string);
             bool isSet(string);
             string toString(int);
     };
 
+    bool propertyTree::load(string path){
+        childNodes.clear();
+        fstream prop;
+        prop.open(path,ios::in);
+        if(!prop)
+            return false;
+        string line;
+        vector<string> prevProps;
+        unsigned int level = 0;
+        do{
+            getline(prop, line);
+            if(line[0]=='/' && line[1] == '/')
+                continue;
+            string propName,value;
+            bool flag = false;
+            for(unsigned int i=0;i<line.length();++i){
+                if(line[i]==' ') continue;
+                if(line[i]== '='){
+                    flag = true;
+                    continue;
+                }
+                if(flag)
+                    value.append(&line[i],1);
+                else if(line[i]!='\t')
+                    propName.append(&line[i],1);
+                else
+                    ++level;
+            }
+            if(!value.length())
+                if(level>=prevProps.size())
+                    prevProps.push_back(propName);
+                else
+                    prevProps[level] = propName;
+            else{
+                for(unsigned int i=level-1;i<prevProps.size();--i)
+                    propName = (prevProps[i]+string(".")+propName);
+                if(!propName.compare("version"))
+                    data = value;
+                else
+                    setProperty(propName,value);
+                level=0;
+            }
+        }while(!prop.eof());
+        prop.close();
+        return true;
+    }
     void propertyTree::setProperty(string property, string value){
         bool flag=false;
         string nodeName(""),propName("");
@@ -178,9 +223,9 @@ namespace IntelliDetect{
         properties.data = string("Version ")+string(INTELLI_VERSION);
         properties.setProperty("Id","TestNetwork");
         properties.setProperty("LayerCount",to_string(3));
-        properties.setProperty("Layers.inputLayerSize",to_string(inpSize));
-        properties.setProperty("Layers.hiddenLayerSize",to_string(HdSize));
-        properties.setProperty("Layers.outputLayerSize",to_string(OpSize));
+        properties.setProperty("layers.inputLayerSize",to_string(inpSize));
+        properties.setProperty("layers.hiddenLayerSize",to_string(HdSize));
+        properties.setProperty("layers.outputLayerSize",to_string(OpSize));
 
         m_inputLayerSize = inpSize;
         m_hiddenLayerSize = HdSize;
@@ -211,53 +256,43 @@ namespace IntelliDetect{
     network::network(string path){
         if(path.back()!='/')
             path.append("/",1);
-        //construct property tree
-        fstream prop;
-        prop.open(path+string("network.conf"),ios::in);
-        string line;
-        vector<string> prevProps;
-        unsigned int level = 0;
-        do{
-            getline(prop, line);
-            if(line[0]=='/' && line[1] == '/')
-                continue;
-            string propName,value;
-            bool flag = false;
-            for(unsigned int i=0;i<line.length();++i){
-                if(line[i]==' ') continue;
-                if(line[i]== '='){
-                    flag = true;
-                    continue;
-                }
-                if(flag)
-                    value.append(&line[i],1);
-                else if(line[i]!='\t')
-                    propName.append(&line[i],1);
-                else
-                    ++level;
+
+        properties.load(path+string("network.conf"));
+        if(properties.isSet("layers.inputLayerSize"))
+            m_inputLayerSize = stoi(properties.getProperty("layers.inputLayerSize"));
+        if(properties.isSet("layers.hiddenLayerSize"))
+            m_inputLayerSize = stoi(properties.getProperty("layers.hiddenLayerSize"));
+        if(properties.isSet("layers.outputLayerSize"))
+            m_inputLayerSize = stoi(properties.getProperty("layers.outputLayerSize"));
+
+        if(!m_nn_params.load(path+string("parameters.csv"))){
+            cout<<"Randomly initialising weights."<<endl;
+            m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
+            m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
+            m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
+        }
+        else{
+            cout<<"Loading Network sizes from file."<<endl;
+            if(m_inputLayerSize == as_scalar(m_nn_params(0)) &&
+               m_hiddenLayerSize == as_scalar(m_nn_params(1)) &&
+               m_outputLayerSize == as_scalar(m_nn_params(2))){
+                m_nn_params = m_nn_params.rows(3,m_nn_params.n_rows-1);
+                m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
+                m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
             }
-            if(!value.length())
-                if(level>=prevProps.size())
-                    prevProps.push_back(propName);
-                else
-                    prevProps[level] = propName;
             else{
-                for(unsigned int i=level-1;i<prevProps.size();--i)
-                    propName = (prevProps[i]+string(".")+propName);
-                if(!propName.compare("version"))
-                    properties.data = value;
-                else
-                    properties.setProperty(propName,value);
-                level=0;
+                m_nn_params.save(path+string("parameters.csv.back"));
+                m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
+                m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
+                m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
             }
-        }while(!prop.eof());
+        }
+        cout<<"Weights Initialized"<<endl;
 
-        m_nn_params.load(path+string("parameters.csv"));
-
-        fstream &trainStat=prop;
+        fstream trainStat;
         trainStat.open(path+string("trainingStats.csv"),ios::in);
         float trainSetCost,trainSetCostReg;
-        char ch;
+        char ch =' ';
         while(!trainStat.eof()){
             trainStat>>trainSetCost>>ch>>ch>>trainSetCostReg>>ch>>ch>>ch;
             trainSetCosts.push_back(trainSetCost);
@@ -430,7 +465,7 @@ namespace IntelliDetect{
             mat delta_3 = a3-output_tmp;
             mat delta_2 = trans(Theta2.cols(1,Theta2.n_cols-1))*delta_3%activationGradient(z2);
             mat delta_2_check = trans(Theta2.cols(1,Theta2.n_cols-1))*delta_3%numericalGradient(z2);
-            cout<<"Diff in activation grad and num_grad: "<<accu(delta_2-delta_2_check)<<endl;
+            //cout<<"Diff in activation grad and num_grad: "<<accu(delta_2-delta_2_check)<<endl;
             Theta1_grad += delta_2*CurrentInput.t();
             Theta2_grad += delta_3*a2.t();
             output_tmp(as_scalar(Outputs(i)),0) = 0;
