@@ -9,4 +9,4 @@
 *.stash
 *.pro
 *.pro.*
-*/build*/
+*build*/

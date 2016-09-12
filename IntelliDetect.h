@@ -181,6 +181,11 @@ namespace IntelliDetect{
         return (z+abs(z))/(2*z);
     }
 
+    mat randWeights(int Lin, int Lout){
+        const double epsilon = 0.52;
+        return randu(Lin,Lout)*(2*epsilon) - epsilon;
+    }
+
     class network{
             mat m_X,m_Y;
             mat m_Theta1, m_Theta2, m_nn_params;
@@ -190,6 +195,10 @@ namespace IntelliDetect{
             mat (*activation)(mat);
             mat (*activationGradient)(mat);
             propertyTree properties;
+            bool initializeFromPropertyTree();
+            bool randInitWeights();
+            bool constructWeightsFromParameters();
+            bool checkLayerSizes();
 
         public:
 
@@ -198,7 +207,6 @@ namespace IntelliDetect{
             network(mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat),string, int, int, int);
             network(string,mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat));
             network(propertyTree,mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat));
-            mat randInitWeights(int, int);
             mat predict(mat);
             mat predict(string);
             mat output(string);
@@ -220,6 +228,22 @@ namespace IntelliDetect{
         return (activation(z+h)-activation(z))/h;
     }
 
+    bool network::initializeFromPropertyTree(){
+        bool status = true;
+        if(properties.isSet("layers.inputLayerSize"))
+            m_inputLayerSize = stoi(properties.getProperty("layers.inputLayerSize"));
+        else status = false;
+        if(properties.isSet("layers.hiddenLayerSize"))
+            m_hiddenLayerSize = stoi(properties.getProperty("layers.hiddenLayerSize"));
+        else status = false;
+        if(properties.isSet("layers.outputLayerSize"))
+            m_outputLayerSize = stoi(properties.getProperty("layers.outputLayerSize"));
+        else status = false;
+        if(properties.isSet("saveLocation"))
+            m_paramPath = properties.getProperty("saveLocation");
+        return status;
+    }
+
     network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
         properties.data = string("Version ")+string(INTELLI_VERSION);
         properties.setProperty("Id","TestNetwork");
@@ -236,18 +260,17 @@ namespace IntelliDetect{
         activationGradient = activationGradientPtr;
         if(m_nn_params.load(param)==false){
             cout<<"Randomly initialising weights."<<endl;
-            m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
-            m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
-            m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
+            randInitWeights();
         }
         else{
             cout<<"Loading Network sizes from file."<<endl;
             m_inputLayerSize = as_scalar(m_nn_params(0));
-            m_hiddenLayerSize = as_scalar(m_nn_params(1));
+            m_hiddenLayerSize = as_scalar(m_nn_params(0));
             m_outputLayerSize = as_scalar(m_nn_params(2));
-            m_nn_params = m_nn_params.rows(3,m_nn_params.n_rows-1);
-            m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
-            m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
+            properties.setProperty("layers.inputLayerSize",to_string(as_scalar(m_nn_params(0))));
+            properties.setProperty("layers.hiddenLayerSize",to_string(as_scalar(m_nn_params(1))));
+            properties.setProperty("layers.outputLayerSize",to_string(as_scalar(m_nn_params(2))));
+            constructWeightsFromParameters();
         }
         cout<<"Weights Initialized"<<endl;
         trainSetCosts.resize(0);
@@ -260,46 +283,19 @@ namespace IntelliDetect{
         activation = activationPtr;
         activationGradient = activationGradientPtr;
         properties.load(path+string("network.conf"));
-        bool status = true;
-        if(properties.isSet("layers.inputLayerSize"))
-            m_inputLayerSize = stoi(properties.getProperty("layers.inputLayerSize"));
-        else status = false;
-        if(properties.isSet("layers.hiddenLayerSize"))
-            m_hiddenLayerSize = stoi(properties.getProperty("layers.hiddenLayerSize"));
-        else status = false;
-        if(properties.isSet("layers.outputLayerSize"))
-            m_outputLayerSize = stoi(properties.getProperty("layers.outputLayerSize"));
-        else status = false;
+        properties.setProperty("saveLocation",path);
+
+        initializeFromPropertyTree();
+
         cout<<"Set layer sizes to "<<m_inputLayerSize<<", "
             <<m_hiddenLayerSize<<", "<<m_outputLayerSize<<endl;
         if(!m_nn_params.load(path+string("parameters.csv"))){
             cout<<"Randomly initialising weights."<<endl;
-            m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
-            m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
-            m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
+            randInitWeights();
         }
         else{
             cout<<"Loading Network sizes from file."<<endl;
-            if(!status){
-                m_inputLayerSize = as_scalar(m_nn_params(0));
-                m_hiddenLayerSize = as_scalar(m_nn_params(1));
-                m_outputLayerSize = as_scalar(m_nn_params(2));
-                cout<<"Set layer sizes to "<<m_inputLayerSize<<", "
-                    <<m_hiddenLayerSize<<", "<<m_outputLayerSize<<endl;
-            }
-            if(m_inputLayerSize == as_scalar(m_nn_params(0)) &&
-               m_hiddenLayerSize == as_scalar(m_nn_params(1)) &&
-               m_outputLayerSize == as_scalar(m_nn_params(2))){
-                m_nn_params = m_nn_params.rows(3,m_nn_params.n_rows-1);
-                m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
-                m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
-            }
-            else{
-                m_nn_params.save(path+string("parameters.csv.back"));
-                m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
-                m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
-                m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
-            }
+            constructWeightsFromParameters();
         }
         cout<<"Weights Initialized"<<endl;
 
@@ -320,26 +316,65 @@ namespace IntelliDetect{
     }
 
     network::network(propertyTree props,mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient){
-        bool status = true;
         activation = activationPtr;
         activationGradient = activationGradientPtr;
         properties = props;
-        if(properties.isSet("layers.inputLayerSize"))
-            m_inputLayerSize = stoi(properties.getProperty("layers.inputLayerSize"));
-        else status = false;
-        if(properties.isSet("layers.hiddenLayerSize"))
-            m_hiddenLayerSize = stoi(properties.getProperty("layers.hiddenLayerSize"));
-        else status = false;
-        if(properties.isSet("layers.outputLayerSize"))
-            m_outputLayerSize = stoi(properties.getProperty("layers.outputLayerSize"));
-        else status = false;
-        if(properties.isSet("saveLocation"))
-            m_paramPath = properties.getProperty("saveLocation");
-        m_Theta1 = randInitWeights(m_hiddenLayerSize, m_inputLayerSize+1);
-        m_Theta2 = randInitWeights(m_outputLayerSize,m_hiddenLayerSize+1);
-        m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2));
+        bool status = initializeFromPropertyTree();
+        m_Theta1 = randWeights(m_hiddenLayerSize, m_inputLayerSize+1);
+        m_Theta2 = randWeights(m_outputLayerSize,m_hiddenLayerSize+1);
+        m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
         if(!status)
             cout<<"Error: Layer sizes not provided"<<endl;
+    }
+
+    bool network::checkLayerSizes(){
+        bool layerSizesSet = false;
+        if(properties.isSet("layers.inputLayerSize") &&
+           properties.isSet("layers.hiddenLayerSize") &&
+           properties.isSet("layers.outputLayerSize"))
+            layerSizesSet = true;
+        else
+            cout<<"Error: Weights initialized before setting layerSizes";
+        return layerSizesSet;
+    }
+
+    bool network::randInitWeights(){
+        bool layerSizesSet = false;
+        layerSizesSet = checkLayerSizes();
+        m_Theta1 = randWeights(m_hiddenLayerSize, m_inputLayerSize+1);
+        m_Theta2 = randWeights(m_outputLayerSize,m_hiddenLayerSize+1);
+        m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
+        return layerSizesSet;
+    }
+
+    bool network::constructWeightsFromParameters(){
+        bool layerSizesSet = checkLayerSizes();
+        bool status = true;
+        if(!layerSizesSet){
+            m_inputLayerSize = as_scalar(m_nn_params(0));
+            m_hiddenLayerSize = as_scalar(m_nn_params(1));
+            m_outputLayerSize = as_scalar(m_nn_params(2));
+            cout<<"Set layer sizes to "<<m_inputLayerSize<<", "
+                <<m_hiddenLayerSize<<", "<<m_outputLayerSize<<endl;
+            properties.setProperty("layers.inputLayerSize",to_string(m_inputLayerSize));
+            properties.setProperty("layers.hiddenLayerSize",to_string(m_hiddenLayerSize));
+            properties.setProperty("layers.outputLayerSize",to_string(m_outputLayerSize));
+
+        }
+        if(m_inputLayerSize == as_scalar(m_nn_params(0)) &&
+           m_hiddenLayerSize == as_scalar(m_nn_params(1)) &&
+           m_outputLayerSize == as_scalar(m_nn_params(2))){
+            m_nn_params = m_nn_params.rows(3,m_nn_params.n_rows-1);
+            m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
+            m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
+        }
+        else{
+            if(properties.isSet("saveLocation"))
+                m_nn_params.save(properties.getProperty("saveLocation")+string("parameters.csv.back"));
+            randInitWeights();
+            status = false;
+        }
+        return status;
     }
 
     bool network::load(vector<string> paths, int startInd=0, int endInd=0){
@@ -434,11 +469,6 @@ namespace IntelliDetect{
         configFile<<properties.toString();
         configFile.close();
         return true;
-    }
-
-    mat network::randInitWeights(int Lin, int Lout){
-        double epsilon = 0.52;
-        return randu(Lin,Lout)*(2*epsilon) - epsilon;
     }
 
     mat network::predict(mat Input){
