@@ -187,7 +187,7 @@ namespace IntelliDetect{
     }
 
     class network{
-            mat m_X,m_Y;
+            mat m_Inputs,m_Lables;
             mat m_Theta1, m_Theta2;
             int m_inputLayerSize,m_hiddenLayerSize,m_outputLayerSize;
             string m_paramPath;
@@ -322,9 +322,7 @@ namespace IntelliDetect{
         activationGradient = activationGradientPtr;
         properties = props;
         bool status = initializeFromPropertyTree();
-        m_Theta1 = randWeights(m_hiddenLayerSize, m_inputLayerSize+1);
-        m_Theta2 = randWeights(m_outputLayerSize,m_hiddenLayerSize+1);
-        //m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
+        randInitWeights();
         if(!status)
             cout<<"Error: Layer sizes not provided"<<endl;
     }
@@ -345,7 +343,6 @@ namespace IntelliDetect{
         layerSizesSet = checkLayerSizes();
         m_Theta1 = randWeights(m_hiddenLayerSize, m_inputLayerSize+1);
         m_Theta2 = randWeights(m_outputLayerSize,m_hiddenLayerSize+1);
-        //m_nn_params = join_vert(vectorise(m_Theta1),vectorise(m_Theta2)); //the weights in a more manageable format
         return layerSizesSet;
     }
 
@@ -387,33 +384,33 @@ namespace IntelliDetect{
 
         m_inpPaths = paths;
         mat tmpX;
-        m_X.resize(0,0);
+        m_Inputs.resize(0,0);
         unsigned int i=0;
         do{
             tmpX.load(m_inpPaths.at(i++));
-            m_X = join_vert(m_X,tmpX);
+            m_Inputs = join_vert(m_Inputs,tmpX);
         }while(i<m_inpPaths.size()-1); //last path represents test set.)
-        m_X = shuffle(m_X);
+        m_Inputs = shuffle(m_Inputs);
         if(endInd)
-            m_X = m_X.rows(startInd,endInd);
+            m_Inputs = m_Inputs.rows(startInd,endInd);
         else
-            m_X = m_X.rows(startInd,m_X.n_rows-1);
-        m_Y = m_X.col(0);
-        m_X = m_X.cols(1,m_X.n_cols-1);
+            m_Inputs = m_Inputs.rows(startInd,m_Inputs.n_rows-1);
+        m_Lables = m_Inputs.col(0);
+        m_Inputs = m_Inputs.cols(1,m_Inputs.n_cols-1);
 
         return true;
     }
 
     bool network::load(string path, int startInd=0, int endInd=0){
-        if(m_X.load(path)==false)
+        if(m_Inputs.load(path)==false)
             return false;
-        m_X = shuffle(m_X);
+        m_Inputs = shuffle(m_Inputs);
         if(endInd)
-            m_X = m_X.rows(startInd,endInd);
+            m_Inputs = m_Inputs.rows(startInd,endInd);
         else
-            m_X = m_X.rows(startInd,m_X.n_rows-1);
-        m_Y = m_X.col(0);
-        m_X = m_X.cols(1,m_X.n_cols-1);
+            m_Inputs = m_Inputs.rows(startInd,m_Inputs.n_rows-1);
+        m_Lables = m_Inputs.col(0);
+        m_Inputs = m_Inputs.cols(1,m_Inputs.n_cols-1);
 
         return true;
     }
@@ -427,8 +424,8 @@ namespace IntelliDetect{
             cout<<"network::load() error: Labels cannot be a vector";
             return false;
         }
-        m_X = Inputs;
-        m_Y = Labels;
+        m_Inputs = Inputs;
+        m_Lables = Labels;
 
         return true;
     }
@@ -515,9 +512,7 @@ namespace IntelliDetect{
         return output(inputMat);
     }
 
-    void network::backpropogate(mat Inputs, mat Outputs, double lambda, double learningRate){
-        //mat m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
-        //mat m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.n_rows-1), m_outputLayerSize, m_hiddenLayerSize+1);
+    void network::backpropogate(mat Inputs, mat Outputs, double regularizationParameter, double learningRate){
         int InputSize = Inputs.n_rows;
         long double cost = 0;
         mat Theta1_grad = zeros<mat>(size(m_Theta1));
@@ -537,7 +532,7 @@ namespace IntelliDetect{
 
             mat delta_3 = a3-output_tmp;
             mat delta_2 = trans(m_Theta2.cols(1,m_Theta2.n_cols-1))*delta_3%activationGradient(z2);
-            mat delta_2_check = trans(m_Theta2.cols(1,m_Theta2.n_cols-1))*delta_3%numericalGradient(z2);
+            //mat delta_2_check = trans(m_Theta2.cols(1,m_Theta2.n_cols-1))*delta_3%numericalGradient(z2);
             //cout<<"Diff in activation grad and num_grad: "<<accu(delta_2-delta_2_check)<<endl;
             Theta1_grad += delta_2*CurrentInput.t();
             Theta2_grad += delta_3*a2.t();
@@ -545,54 +540,50 @@ namespace IntelliDetect{
         }
         cout<<"\tCost(unregularized) = "<<cost;
         trainSetCosts.push_back(cost);
-        cost += (accu(square(m_Theta1.cols(1,m_Theta1.n_cols-1)))+accu(square(m_Theta2.cols(1,m_hiddenLayerSize))))*lambda/(2*InputSize);
+        cost += (accu(square(m_Theta1.cols(1,m_Theta1.n_cols-1)))+accu(square(m_Theta2.cols(1,m_hiddenLayerSize))))*regularizationParameter/(2*InputSize);
         cout<<"\t\tCost (regularized) = "<<cost<<endl;
         trainSetCostsReg.push_back(cost);
         Theta1_grad /= InputSize;
         Theta2_grad /= InputSize;
 
-        Theta1_grad += join_horiz(zeros<mat>(m_Theta1.n_rows,1), (lambda/InputSize)*m_Theta1.cols(1,m_Theta1.n_cols-1));
-        Theta2_grad += join_horiz(zeros<mat>(m_Theta2.n_rows,1), (lambda/InputSize)*m_Theta2.cols(1,m_Theta2.n_cols-1));
+        Theta1_grad += join_horiz(zeros<mat>(m_Theta1.n_rows,1), (regularizationParameter/InputSize)*m_Theta1.cols(1,m_Theta1.n_cols-1));
+        Theta2_grad += join_horiz(zeros<mat>(m_Theta2.n_rows,1), (regularizationParameter/InputSize)*m_Theta2.cols(1,m_Theta2.n_cols-1));
 
         m_Theta1 -= learningRate*Theta1_grad;
         m_Theta2 -= learningRate*Theta2_grad;
-        //mat grad = join_vert(vectorise(Theta1_grad),vectorise(Theta2_grad));
-        //return grad;
     }
 
-    void network::train(double lambda = 0.25,double alpha = 0.01,double mu = 1){//regularization parameter and learning rate and a momentum constant
-        properties.setProperty("hyperParamaters.regularizationParameter",to_string(lambda));
-        properties.setProperty("hyperParamaters.learningRate",to_string(alpha));
-        properties.setProperty("hyperParamaters.momentumConstant",to_string(mu));
-        int Total = m_X.n_rows, batch_size = m_X.n_rows/100, IterCnt = 50;
+    void network::train(double regularizationParameter = 0.25,double learningRate = 0.05,double momentumConstant = 1){
+        properties.setProperty("hyperParamaters.regularizationParameter",to_string(regularizationParameter));
+        properties.setProperty("hyperParamaters.learningRate",to_string(learningRate));
+        properties.setProperty("hyperParamaters.momentumConstant",to_string(momentumConstant));
+        int Total = m_Inputs.n_rows, batch_size = m_Inputs.n_rows/100, IterCnt = 50;
         if(!batch_size){
             batch_size = 1;
             IterCnt = 10;
         }
         cout<<"\n\tStarting batch training.\n\n";
 
-        cout<<"Prediction Accuracy before training: "<<accuracy(m_X, m_Y)<<endl<<endl;
+        cout<<"Prediction Accuracy before training: "<<accuracy(m_Inputs, m_Lables)<<endl<<endl;
         double acc;
         do{
             for(int k = 0;k<Total/batch_size; ++k){
-                mat X_batch = m_X.rows(batch_size*(k),batch_size*(k+1)-1);
-                mat Y_batch = m_Y.rows(batch_size*(k),batch_size*(k+1)-1);
+                mat Input_batch = m_Inputs.rows(batch_size*(k),batch_size*(k+1)-1);
+                mat Label_batch = m_Lables.rows(batch_size*(k),batch_size*(k+1)-1);
                 cout<<"Batch "<<k+1<<endl;
                 for(int i=0; i<IterCnt; ++i){
                     cout<<"\tIteration "<<i+1<<endl;
-                    backpropogate(X_batch, Y_batch, lambda, alpha);
+                    backpropogate(Input_batch, Label_batch, regularizationParameter, learningRate);
                 }
             }
-            //m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
-            //m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
-            acc = accuracy(m_X, m_Y);
+            acc = accuracy(m_Inputs, m_Lables);
             cout<<"Prediction Accuracy on training set: "<<acc<<endl;
-        }while(acc<90);
+        }while(acc<70);
 
         if(m_inpPaths.size()){
             if(load(m_inpPaths.at(m_inpPaths.size()-1))==true){
                 cout<<"\n\nUsing test set"<<endl;
-                cout<<"Prediction Accuracy on test set: "<<accuracy(m_X, m_Y)<<endl;
+                cout<<"Prediction Accuracy on test set: "<<accuracy(m_Inputs, m_Lables)<<endl;
             }
             else
                 cout<<"Could not load test set. Training may be incomplete."<<endl;
@@ -602,35 +593,33 @@ namespace IntelliDetect{
         save(m_paramPath);
     }
 
-    void network::train(string input, int label, double lambda = 0.5,double alpha = 0.05,double mu = 1){//regularization parameter and learning rate and a momentum constant
-        properties.setProperty("HyperParamaters.RegularizationParameter",to_string(lambda));
-        properties.setProperty("HyperParamaters.LearningRate",to_string(alpha));
-        properties.setProperty("HyperParamaters.momentumConstant",to_string(mu));
+    void network::train(string input, int label, double regularizationParameter = 0.5,double learningRate = 0.05,double momentumConstant = 1){//regularization parameter and learning rate and a momentum constant
+        properties.setProperty("HyperParamaters.RegularizationParameter",to_string(regularizationParameter));
+        properties.setProperty("HyperParamaters.LearningRate",to_string(learningRate));
+        properties.setProperty("HyperParamaters.momentumConstant",to_string(momentumConstant));
 
         cout<<"\n\tStarting individual training.\n\n";
 
-        mat X = zeros(28,28);
-        mat Y = zeros(1,1);
-        X.load(input);
-        X.reshape(1,784);
-        Y.at(0) = label;
-        cout<<"Overall Prediction Accuracy before training: "<<accuracy(X, Y)<<endl<<endl;
+        mat Input = zeros(28,28);
+        mat Label = zeros(1,1);
+        Input.load(input);
+        Input.reshape(1,784);
+        Label.at(0) = label;
+        cout<<"Overall Prediction Accuracy before training: "<<accuracy(Input, Label)<<endl<<endl;
 
         int i=0;
         while(1){
             cout<<"\tIteration "<<++i<<endl;
-            backpropogate(X, Y, lambda, alpha);
-            //m_Theta1 = reshape(m_nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSize)-1),m_hiddenLayerSize,m_inputLayerSize+1);
-            //m_Theta2 = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSize),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSize+1);
-            mat out = predict(X);
-            mat conf = output(X);
+            backpropogate(Input, Label, regularizationParameter, learningRate);
+            mat out = predict(Input);
+            mat conf = output(Input);
             cout<<"out.at(0) = "<<out.at(0)<<endl<<"confidence = "<<conf(0)<<endl;
             if(out.at(0) == label && conf(0)>0.5)
                 break;
         }
 
         cout<<"Done training on given example."<<endl;
-        cout<<"Overall Prediction Accuracy after training: "<<accuracy(X, Y)<<endl<<endl;
+        cout<<"Overall Prediction Accuracy after training: "<<accuracy(Input, Label)<<endl<<endl;
         save(m_paramPath);
     }
 
@@ -644,7 +633,7 @@ namespace IntelliDetect{
     }
 
     class ConvNet :public network{
-            mat m_X,m_Y;
+            mat m_Inputs,m_Lables;
             int m_imgHt,m_imgWth, m_strideLn;
             vector<int> m_convSizes;
             network m_FCnet;
