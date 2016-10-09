@@ -208,6 +208,7 @@ namespace IntelliDetect{
             void constructParameters(string);
             bool checkLayerSizes();
             void buildPropertyTree();
+            vector<mat> forwardPass(mat);
 
         public:
 
@@ -502,30 +503,34 @@ namespace IntelliDetect{
         configFile.close();
         return true;
     }
-
-    mat network::predict(mat Input){
+    vector<mat> network::forwardPass(mat Input){
+        vector<mat> layers;
+        layers.reserve(m_hiddenLayerSizes.capacity()+1);
         int InputSize = Input.n_rows;
         Input = join_horiz(ones<mat>(InputSize,1),Input);
-        mat z2 = Input*trans(m_Theta1);
-        mat h1 = join_horiz(ones<mat>(z2.n_rows,1),activation(z2));
-        mat h2 = sigmoid(h1*trans(m_Theta2));
+        layers.push_back(Input*trans(m_Theta1));
+        mat tmp = join_horiz(ones<mat>(layers[0].n_rows,1),activation(layers[0]));
+        layers.push_back(sigmoid(tmp*trans(m_Theta2)));
+        return layers;
+    }
+
+    mat network::predict(mat Input){
+        vector<mat> layers = forwardPass(Input);
+        int InputSize = Input.n_rows;
         mat pred = zeros(InputSize,1);
         for(int i=0; i<InputSize; ++i){
-            pred(i) = h2.row(i).index_max();
+            pred(i) = layers.back().row(i).index_max();
         }
         return pred;
     }
     mat network::output(mat Input){
         int InputSize = Input.n_rows;
-        Input = join_horiz(ones<mat>(InputSize,1),Input);
-        mat z2 = Input*trans(m_Theta1);
-        mat h1 = join_horiz(ones<mat>(z2.n_rows,1),activation(z2));
-        mat h2 = sigmoid(h1*trans(m_Theta2));
+        vector<mat> layers = forwardPass(Input);
+        cout<<"Output: "<<layers.back()<<endl;
+        cout<<"Sum of outputs"<<accu(layers.back())<<endl;
         mat pred = zeros(InputSize,1);
-        cout<<"Output: "<<h2<<endl;
-        cout<<"Sum of outputs"<<accu(h2)<<endl;
         for(int i=0; i<InputSize; ++i){
-            pred(i) = h2.row(i).max();
+            pred(i) = layers.back().row(i).max();
         }
         return pred;
 
@@ -552,22 +557,25 @@ namespace IntelliDetect{
         Inputs = join_horiz(ones<mat>(InputSize,1), Inputs); //Add the weights from the bias neuron.
         mat output_tmp = zeros<mat>(10,1);
         for(int i=0; i<InputSize; ++i){
-            mat CurrentInput = trans(Inputs.row(i));
-            mat z2 = m_Theta1*CurrentInput;
-            mat a2 = activation(z2);
-            a2 = join_vert(ones<mat>(1,1),a2);
-            mat z3 = m_Theta2*a2;
-            mat a3 = sigmoid(z3);
+//            mat CurrentInput = trans(Inputs.row(i));
+//            mat z2 = m_Theta1*CurrentInput;
+//            mat a2 = activation(z2);
+//            a2 = join_vert(ones<mat>(1,1),a2);
+//            mat z3 = m_Theta2*a2;
+//            mat a3 = sigmoid(z3);
+            vector<mat> layers = forwardPass(Inputs.row(i).cols(0,Inputs.n_cols-2));
+            mat activation3 = sigmoid(layers.back().t());
+            mat activation2 = join_horiz(ones<mat>(1,1),sigmoid(layers[0]));
             output_tmp(as_scalar(Outputs(i))) = 1;
 
-            cost += as_scalar(accu(output_tmp%log(a3)+(1-output_tmp)%log(1-a3)))/InputSize*(-1);
+            cost += as_scalar(accu(output_tmp%log(activation3)+(1-output_tmp)%log(1-activation3)))/InputSize*(-1);
 
-            mat delta_3 = a3-output_tmp;
-            mat delta_2 = trans(m_Theta2.cols(1,m_Theta2.n_cols-1))*delta_3%activationGradient(z2);
+            mat delta_3 = activation3-output_tmp;
+            mat delta_2 = trans(m_Theta2.cols(1,m_Theta2.n_cols-1))*delta_3%activationGradient(layers[0].t());
             //mat delta_2_check = trans(m_Theta2.cols(1,m_Theta2.n_cols-1))*delta_3%numericalGradient(z2);
             //cout<<"Diff in activation grad and num_grad: "<<accu(delta_2-delta_2_check)<<endl;
-            Theta1_grad += delta_2*CurrentInput.t();
-            Theta2_grad += delta_3*a2.t();
+            Theta1_grad += delta_2*Inputs.row(i);
+            Theta2_grad += delta_3*activation2;
             output_tmp(as_scalar(Outputs(i)),0) = 0;
         }
         cout<<"\tCost(unregularized) = "<<cost;
