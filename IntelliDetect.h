@@ -198,7 +198,9 @@ namespace IntelliDetect{
             bool initializeFromPropertyTree();
             bool randInitWeights();
             bool constructWeightsFromParameters(mat&);
+            void constructParameters(string);
             bool checkLayerSizes();
+            void buildPropertyTree();
 
         public:
 
@@ -244,38 +246,27 @@ namespace IntelliDetect{
         return status;
     }
 
-    network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
+    void network::buildPropertyTree(){
         properties.data = string("Version ")+string(INTELLI_VERSION);
         properties.setProperty("Id","TestNetwork");
         properties.setProperty("LayerCount",to_string(3));
-        properties.setProperty("layers.inputLayerSize",to_string(inpSize));
-        properties.setProperty("layers.hiddenLayerSize",to_string(HdSize));
-        properties.setProperty("layers.outputLayerSize",to_string(OpSize));
+        properties.setProperty("layers.inputLayerSize",to_string(m_inputLayerSize));
+        properties.setProperty("layers.hiddenLayerSize",to_string(m_hiddenLayerSize));
+        properties.setProperty("layers.outputLayerSize",to_string(m_outputLayerSize));
+        properties.setProperty("saveLocation",m_paramPath);
+    }
 
+    network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
+        m_paramPath = param;
         m_inputLayerSize = inpSize;
         m_hiddenLayerSize = HdSize;
         m_outputLayerSize = OpSize;
-        m_paramPath = param;
         activation = activationPtr;
         activationGradient = activationGradientPtr;
-        mat nn_params;
-        if(nn_params.load(param)==false){
-            cout<<"Randomly initialising weights."<<endl;
-            randInitWeights();
-        }
-        else{
-            cout<<"Loading Network sizes from file."<<endl;
-            m_inputLayerSize = as_scalar(nn_params(0));
-            m_hiddenLayerSize = as_scalar(nn_params(0));
-            m_outputLayerSize = as_scalar(nn_params(2));
-            properties.setProperty("layers.inputLayerSize",to_string(as_scalar(nn_params(0))));
-            properties.setProperty("layers.hiddenLayerSize",to_string(as_scalar(nn_params(1))));
-            properties.setProperty("layers.outputLayerSize",to_string(as_scalar(nn_params(2))));
-            constructWeightsFromParameters(nn_params);
-        }
-        cout<<"Weights Initialized"<<endl;
+        constructParameters(param);
         trainSetCosts.resize(0);
         trainSetCostsReg.resize(0);
+        buildPropertyTree();
     }
 
     network::network(string path,mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient){
@@ -286,20 +277,14 @@ namespace IntelliDetect{
         properties.load(path+string("network.conf"));
         properties.setProperty("saveLocation",path);
 
-        initializeFromPropertyTree();
+        bool status = initializeFromPropertyTree();
+        if(!status)
+            cout<<"Error: provided configuration is incomplete"<<endl;
 
         cout<<"Set layer sizes to "<<m_inputLayerSize<<", "
             <<m_hiddenLayerSize<<", "<<m_outputLayerSize<<endl;
-        mat nn_params;
-        if(!nn_params.load(path+string("parameters.csv"))){
-            cout<<"Randomly initialising weights."<<endl;
-            randInitWeights();
-        }
-        else{
-            cout<<"Loading Network sizes from file."<<endl;
-            constructWeightsFromParameters(nn_params);
-        }
-        cout<<"Weights Initialized"<<endl;
+
+        constructParameters(path+string("parameters.csv"));
 
         fstream trainStat;
         trainStat.open(path+string("trainingStats.csv"),ios::in);
@@ -322,9 +307,9 @@ namespace IntelliDetect{
         activationGradient = activationGradientPtr;
         properties = props;
         bool status = initializeFromPropertyTree();
-        randInitWeights();
+        constructParameters("");
         if(!status)
-            cout<<"Error: Layer sizes not provided"<<endl;
+            cout<<"Error: Provided property tree is incomplete"<<endl;
     }
 
     bool network::checkLayerSizes(){
@@ -333,8 +318,6 @@ namespace IntelliDetect{
            properties.isSet("layers.hiddenLayerSize") &&
            properties.isSet("layers.outputLayerSize"))
             layerSizesSet = true;
-        else
-            cout<<"Error: Weights initialized before setting layerSizes";
         return layerSizesSet;
     }
 
@@ -346,6 +329,19 @@ namespace IntelliDetect{
         return layerSizesSet;
     }
 
+    void network::constructParameters(string path){
+        mat nn_params;
+        if(!nn_params.load(path)){
+            cout<<"Randomly initialising weights."<<endl;
+            randInitWeights();
+        }
+        else{
+            cout<<"Loading Network sizes from file."<<endl;
+            constructWeightsFromParameters(nn_params);
+        }
+        cout<<"Weights Initialized"<<endl;
+    }
+
     bool network::constructWeightsFromParameters(mat &nn_params){
         bool layerSizesSet = checkLayerSizes();
         bool status = true;
@@ -355,9 +351,6 @@ namespace IntelliDetect{
             m_outputLayerSize = as_scalar(nn_params(2));
             cout<<"Set layer sizes to "<<m_inputLayerSize<<", "
                 <<m_hiddenLayerSize<<", "<<m_outputLayerSize<<endl;
-            properties.setProperty("layers.inputLayerSize",to_string(m_inputLayerSize));
-            properties.setProperty("layers.hiddenLayerSize",to_string(m_hiddenLayerSize));
-            properties.setProperty("layers.outputLayerSize",to_string(m_outputLayerSize));
 
         }
         if(m_inputLayerSize == as_scalar(nn_params(0)) &&
