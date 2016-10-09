@@ -16,6 +16,23 @@ using namespace arma;
 using namespace std;
 
 namespace IntelliDetect{
+    namespace Property {
+        const string hiddenLayerCount = "hiddenLayerCount";
+        const string saveLocation = "saveLocation";
+        const string Id = "Id";
+        namespace layers {
+            const string inputLayerSize = "layers.inputLayerSize";
+            const string outputLayerSize = "layers.outputLayerSize";
+            const string hiddenLayerSize(int num){
+                return "layers.hiddenLayerSize"+to_string(num);
+            }
+        }
+        namespace hyperParameters {
+            const string regularizationParameter = "hyperParameters.regularizationParameter";
+            const string learningRate = "hyperParameters.learningRate";
+            const string momentumConstant = "hyperParameters.momentumConstant";
+        }
+    }
 
     struct propertyTree{
             string data;
@@ -241,38 +258,38 @@ namespace IntelliDetect{
     bool network::initializeFromPropertyTree(){
         bool status = true;
         int hiddenLayerCount = 0;
-        if(properties.isSet("hiddenLayerCount")){
-            hiddenLayerCount = stoi(properties.getProperty("hiddenLayerCount"));
+        if(properties.isSet(Property::hiddenLayerCount)){
+            hiddenLayerCount = stoi(properties.getProperty(Property::hiddenLayerCount));
             m_hiddenLayerSizes.reserve(hiddenLayerCount);
         }
         else status = false;
-        if(properties.isSet("layers.inputLayerSize"))
-            m_inputLayerSize = stoi(properties.getProperty("layers.inputLayerSize"));
+        if(properties.isSet(Property::layers::inputLayerSize))
+            m_inputLayerSize = stoi(properties.getProperty(Property::layers::inputLayerSize));
         else status = false;
 
         for(int i=0;i<hiddenLayerCount;++i){
-            if(properties.isSet("layers.hiddenLayerSize"+to_string(i)))
-                m_hiddenLayerSizes[i] = stoi(properties.getProperty("layers.hiddenLayerSize"+to_string(i)));
+            if(properties.isSet(Property::layers::hiddenLayerSize(i)))
+                m_hiddenLayerSizes[i] = stoi(properties.getProperty(Property::layers::hiddenLayerSize(i)));
             else status = false;
         }
 
-        if(properties.isSet("layers.outputLayerSize"))
-            m_outputLayerSize = stoi(properties.getProperty("layers.outputLayerSize"));
+        if(properties.isSet(Property::layers::outputLayerSize))
+            m_outputLayerSize = stoi(properties.getProperty(Property::layers::outputLayerSize));
         else status = false;
-        if(properties.isSet("saveLocation"))
-            m_paramPath = properties.getProperty("saveLocation");
+        if(properties.isSet(Property::saveLocation))
+            m_paramPath = properties.getProperty(Property::saveLocation);
         return status;
     }
 
     void network::buildPropertyTree(){
         properties.data = string("Version ")+string(INTELLI_VERSION);
-        properties.setPropertyIfNotSet("Id","TestNetwork");
-        properties.setPropertyIfNotSet("hiddenLayerCount",to_string(m_hiddenLayerSizes.capacity()));
-        properties.setPropertyIfNotSet("layers.inputLayerSize",to_string(m_inputLayerSize));
+        properties.setPropertyIfNotSet(Property::Id,"TestNetwork");
+        properties.setPropertyIfNotSet(Property::hiddenLayerCount,to_string(m_hiddenLayerSizes.capacity()));
+        properties.setPropertyIfNotSet(Property::layers::inputLayerSize,to_string(m_inputLayerSize));
         for(unsigned int i=0;i<m_hiddenLayerSizes.capacity();++i)
-            properties.setPropertyIfNotSet("layers.hiddenLayerSize"+to_string(i),to_string(m_hiddenLayerSizes[i]));
-        properties.setPropertyIfNotSet("layers.outputLayerSize",to_string(m_outputLayerSize));
-        properties.setPropertyIfNotSet("saveLocation",m_paramPath);
+            properties.setPropertyIfNotSet(Property::layers::hiddenLayerSize(i),to_string(m_hiddenLayerSizes[i]));
+        properties.setPropertyIfNotSet(Property::layers::outputLayerSize,to_string(m_outputLayerSize));
+        properties.setPropertyIfNotSet(Property::saveLocation,m_paramPath);
     }
 
     network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
@@ -295,7 +312,7 @@ namespace IntelliDetect{
         activation = activationPtr;
         activationGradient = activationGradientPtr;
         properties.load(path+string("network.conf"));
-        properties.setProperty("saveLocation",path);
+        properties.setProperty(Property::saveLocation,path);
 
         bool status = initializeFromPropertyTree();
         if(!status)
@@ -331,15 +348,15 @@ namespace IntelliDetect{
 
     bool network::checkLayerSizes(){
         bool layerSizesSet = true;
-        if(!(properties.isSet("layers.inputLayerSize") &&
-           properties.isSet("layers.outputLayerSize")))
+        if(!(properties.isSet(Property::layers::inputLayerSize) &&
+           properties.isSet(Property::layers::outputLayerSize)))
             layerSizesSet = false;
         int hiddenLayerCount = 0;
-        if(properties.isSet("hiddenLayerCount"))
-            hiddenLayerCount = stoi(properties.getProperty("hiddenLayerCount"));
+        if(properties.isSet(Property::hiddenLayerCount))
+            hiddenLayerCount = stoi(properties.getProperty(Property::hiddenLayerCount));
         else layerSizesSet = false;
         for(int i=0;i<hiddenLayerCount;++i)
-            if(!properties.isSet("layers.hiddenLayerSize"+to_string(i)))
+            if(!properties.isSet(Property::layers::hiddenLayerSize(i)))
                 layerSizesSet=false;
         return layerSizesSet;
     }
@@ -389,8 +406,8 @@ namespace IntelliDetect{
             m_Theta2 = reshape(nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSizes[0]),nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSizes[0]+1);
         }
         else{
-            if(properties.isSet("saveLocation"))
-                nn_params.save(properties.getProperty("saveLocation")+string("parameters.csv.back"));
+            if(properties.isSet(Property::saveLocation))
+                nn_params.save(properties.getProperty(Property::saveLocation)+string("parameters.csv.back"));
             randInitWeights();
         }
 
@@ -464,8 +481,8 @@ namespace IntelliDetect{
             fullpath.append("/",1);
         string folderName;
         time_t Time;
-        if(properties.isSet("Id"))
-            folderName = string(properties.getProperty("Id"));
+        if(properties.isSet(Property::Id))
+            folderName = string(properties.getProperty(Property::Id));
         else{
             time(&Time);
             folderName = string("network ")+string(asctime(localtime(&Time)));
@@ -557,12 +574,6 @@ namespace IntelliDetect{
         Inputs = join_horiz(ones<mat>(InputSize,1), Inputs); //Add the weights from the bias neuron.
         mat output_tmp = zeros<mat>(10,1);
         for(int i=0; i<InputSize; ++i){
-//            mat CurrentInput = trans(Inputs.row(i));
-//            mat z2 = m_Theta1*CurrentInput;
-//            mat a2 = activation(z2);
-//            a2 = join_vert(ones<mat>(1,1),a2);
-//            mat z3 = m_Theta2*a2;
-//            mat a3 = sigmoid(z3);
             vector<mat> layers = forwardPass(Inputs.row(i).cols(0,Inputs.n_cols-2));
             mat activation3 = sigmoid(layers.back().t());
             mat activation2 = join_horiz(ones<mat>(1,1),sigmoid(layers[0]));
@@ -598,9 +609,9 @@ namespace IntelliDetect{
     }
 
     void network::train(double regularizationParameter = 0.25,double learningRate = 0.05,double momentumConstant = 1){
-        properties.setProperty("hyperParamaters.regularizationParameter",to_string(regularizationParameter));
-        properties.setProperty("hyperParamaters.learningRate",to_string(learningRate));
-        properties.setProperty("hyperParamaters.momentumConstant",to_string(momentumConstant));
+        properties.setProperty(Property::hyperParameters::regularizationParameter,to_string(regularizationParameter));
+        properties.setProperty(Property::hyperParameters::learningRate,to_string(learningRate));
+        properties.setProperty(Property::hyperParameters::momentumConstant,to_string(momentumConstant));
         int Total = m_Inputs.n_rows, batch_size = m_Inputs.n_rows/100, IterCnt = 50;
         if(!batch_size){
             batch_size = 1;
@@ -638,9 +649,9 @@ namespace IntelliDetect{
     }
 
     void network::train(string input, int label, double regularizationParameter = 0.5,double learningRate = 0.05,double momentumConstant = 1){//regularization parameter and learning rate and a momentum constant
-        properties.setProperty("HyperParamaters.RegularizationParameter",to_string(regularizationParameter));
-        properties.setProperty("HyperParamaters.LearningRate",to_string(learningRate));
-        properties.setProperty("HyperParamaters.momentumConstant",to_string(momentumConstant));
+        properties.setProperty(Property::hyperParameters::regularizationParameter,to_string(regularizationParameter));
+        properties.setProperty(Property::hyperParameters::learningRate,to_string(learningRate));
+        properties.setProperty(Property::hyperParameters::momentumConstant,to_string(momentumConstant));
 
         cout<<"\n\tStarting individual training.\n\n";
 
