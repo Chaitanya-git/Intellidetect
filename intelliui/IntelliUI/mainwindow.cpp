@@ -67,8 +67,9 @@ void MainWindow::on_actionTrain_from_file_triggered()
             propertyTree prop;
             prop.data = string(INTELLI_VERSION);
             prop.setProperty("Id",Id.toUtf8().toStdString());
+            prop.setProperty("hiddenLayerCount","1");
             prop.setProperty("layers.inputLayerSize","784");
-            prop.setProperty("layers.hiddenLayerSize","100");
+            prop.setProperty("layers.hiddenLayerSize0","100");
             prop.setProperty("layers.outputLayerSize","10");
             prop.setProperty("saveLocation", param_path.toUtf8().toStdString());
             net = new network(prop);
@@ -125,8 +126,9 @@ void MainWindow::on_actionNew_network_triggered()
     propertyTree prop;
     prop.data = string(INTELLI_VERSION);
     prop.setProperty("Id",Id.toUtf8().toStdString());
+    prop.setProperty("hiddenLayerCount","1");
     prop.setProperty("layers.inputLayerSize","784");
-    prop.setProperty("layers.hiddenLayerSize","100");
+    prop.setProperty("layers.hiddenLayerSize0","100");
     prop.setProperty("layers.outputLayerSize","10");
     net = new network(prop);
 }
