@@ -10,7 +10,20 @@ using namespace QtCharts;
 using IntelliDetect::network;
 
 QString fileName;
-network* net = new network(IntelliDetect::sigmoid, IntelliDetect::sigmoidGradient);
+
+propertyTree buildDefaultConfig(){
+    propertyTree prop;
+    prop.data = string(INTELLI_VERSION);
+    prop.setProperty(Property::Id,"DefaultNetwork");
+    prop.setProperty(Property::hiddenLayerCount,"1");
+    prop.setProperty(Property::layers::inputLayerSize,"784");
+    prop.setProperty(Property::layers::hiddenLayerSize(0),"100");
+    prop.setProperty(Property::layers::outputLayerSize,"10");
+    return prop;
+}
+
+network* net = new network(buildDefaultConfig(), IntelliDetect::sigmoid, IntelliDetect::sigmoidGradient);
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -63,13 +76,7 @@ void MainWindow::on_actionTrain_from_file_triggered()
         if(net->getPath().empty()){
             QString param_path = QFileDialog::getExistingDirectory(this, tr("Choose location to save data"));
             QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
-            propertyTree prop;
-            prop.data = string(INTELLI_VERSION);
-            prop.setProperty(Property::Id,Id.toUtf8().toStdString());
-            prop.setProperty(Property::hiddenLayerCount,"1");
-            prop.setProperty(Property::layers::inputLayerSize,"784");
-            prop.setProperty(Property::layers::hiddenLayerSize(0),"100");
-            prop.setProperty(Property::layers::outputLayerSize,"10");
+            propertyTree prop = buildDefaultConfig();
             prop.setProperty(Property::saveLocation, param_path.toUtf8().toStdString());
             net = new network(prop);
         }
@@ -122,13 +129,8 @@ void MainWindow::on_actionView_training_statistics_triggered()
 void MainWindow::on_actionNew_network_triggered()
 {
     QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
-    propertyTree prop;
-    prop.data = string(INTELLI_VERSION);
+    propertyTree prop = buildDefaultConfig();
     prop.setProperty(Property::Id,Id.toUtf8().toStdString());
-    prop.setProperty(Property::hiddenLayerCount,"1");
-    prop.setProperty(Property::layers::inputLayerSize,"784");
-    prop.setProperty(Property::layers::hiddenLayerSize(0),"100");
-    prop.setProperty(Property::layers::outputLayerSize,"10");
     net = new network(prop);
 }
 

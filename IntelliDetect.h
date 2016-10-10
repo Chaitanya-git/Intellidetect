@@ -61,7 +61,6 @@ namespace IntelliDetect{
 
             vector<long double> trainSetCostsReg;
             vector<long double> trainSetCosts;
-            network(mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat),string, int, int, int);
             network(string,mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat));
             network(propertyTree,mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat));
             mat predict(mat);
@@ -120,20 +119,6 @@ namespace IntelliDetect{
             properties.setPropertyIfNotSet(Property::layers::hiddenLayerSize(i),to_string(m_hiddenLayerSizes[i]));
         properties.setPropertyIfNotSet(Property::layers::outputLayerSize,to_string(m_outputLayerSize));
         properties.setPropertyIfNotSet(Property::saveLocation,m_paramPath);
-    }
-
-    network::network(mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient, string param = "", int inpSize = 784, int HdSize = 100, int OpSize = 10){
-        m_paramPath = param;
-        m_inputLayerSize = inpSize;
-        m_hiddenLayerSizes.reserve(1);
-        m_hiddenLayerSizes[0] = HdSize;
-        m_outputLayerSize = OpSize;
-        activation = activationPtr;
-        activationGradient = activationGradientPtr;
-        buildPropertyTree();
-        constructParameters(param);
-        trainSetCosts.resize(0);
-        trainSetCostsReg.resize(0);
     }
 
     network::network(string path,mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient){
@@ -518,31 +503,32 @@ namespace IntelliDetect{
         return m_paramPath;
     }
 
-    class ConvNet :public network{
+    class ConvNet{
             mat m_Inputs,m_Lables;
             int m_imgHt,m_imgWth, m_strideLn;
             vector<int> m_convSizes;
             network m_FCnet;
             vector<mat> m_kernels;
+            propertyTree m_properties;
             mat pool(mat,int);
         public:
-            ConvNet(int,int,int,vector<int>,vector<int>);
+            ConvNet(propertyTree);
             mat backpropogate(mat, mat, double);
             mat predict(mat);
             mat output(mat);
     };
 
-    ConvNet::ConvNet(int imgHt, int imgWth, int strideLn, vector<int> kernelSize, vector<int> convSizes){
-        m_FCnet = network(sigmoid, sigmoidGradient, "", 50, 60, 10);
-        m_imgHt = imgHt;
-        m_imgWth = imgWth;
-        m_strideLn = strideLn;
-        m_convSizes = convSizes;
-        for(unsigned int i=0;i<m_convSizes.size();++i){
-            for(int j=0;j<m_convSizes[i];++j)
-                m_kernels.push_back(ones(kernelSize[i],kernelSize[i]));
-        }
-    }
+    ConvNet::ConvNet(propertyTree properties):m_FCnet(properties){
+        m_properties = properties;
+//        m_imgHt = properties.;
+//        m_imgWth = imgWth;
+//        m_strideLn = strideLn;
+//        m_convSizes = convSizes;
+//        for(unsigned int i=0;i<m_convSizes.size();++i){
+//            for(int j=0;j<m_convSizes[i];++j)
+//                m_kernels.push_back(ones(kernelSize[i],kernelSize[i]));
+//        }
+   }
 
     mat ConvNet::pool(mat layer, int downsamplingFactor){
         mat linearLayer = vectorise(layer);
