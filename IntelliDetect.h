@@ -183,7 +183,7 @@ namespace IntelliDetect{
         if(checkLayerSizes()){
             m_Theta[0] = randWeights(m_hiddenLayerSizes[0], m_inputLayerSize+1);
             for(int i=1;i<hiddenLayerCount;++i)
-                m_Theta[i] = randWeights(m_hiddenLayerSizes[i-1],m_hiddenLayerSizes[i]+1);
+                m_Theta[i] = randWeights(m_hiddenLayerSizes[i],m_hiddenLayerSizes[i-1]+1);
             m_Theta[hiddenLayerCount] = randWeights(m_outputLayerSize,m_hiddenLayerSizes[hiddenLayerCount-1]+1);
         }
         else cout<<"Error: trying to initialize weights without setting layer sizes"<<endl;
@@ -191,7 +191,7 @@ namespace IntelliDetect{
 
     void network::constructParameters(string path){
         mat nn_params;
-        m_Theta = vector<mat>(2);
+        m_Theta = vector<mat>(m_hiddenLayerSizes.capacity()+1);
         if(!nn_params.load(path)){
             cout<<"Randomly initialising weights."<<endl;
             randInitWeights();
@@ -355,8 +355,12 @@ namespace IntelliDetect{
         int InputSize = Input.n_rows;
         Input = join_horiz(ones<mat>(InputSize,1),Input);
         layers.push_back(Input*trans(m_Theta[0]));
-        mat tmp = join_horiz(ones<mat>(layers[0].n_rows,1),activation(layers[0]));
-        layers.push_back(sigmoid(tmp*trans(m_Theta[1])));
+        mat tmp;
+        for(unsigned i=1;i<=m_hiddenLayerSizes.capacity();++i){
+            tmp = join_horiz(ones<mat>(layers[i-1].n_rows,1),activation(layers[i-1]));
+            layers.push_back(tmp*trans(m_Theta[i]));
+        }
+        layers[layers.capacity()-1] = sigmoid(layers.back());
         return layers;
     }
 
@@ -398,8 +402,12 @@ namespace IntelliDetect{
     void network::backpropogate(mat Inputs, mat Outputs, double regularizationParameter, double learningRate){
         int InputSize = Inputs.n_rows;
         long double cost = 0;
-        mat Theta1_grad = zeros<mat>(size(m_Theta[0]));
-        mat Theta2_grad = zeros<mat>(size(m_Theta[1]));
+//        mat Theta_grad[0] = zeros<mat>(size(m_Theta[0]));
+//        mat Theta_grad[1] = zeros<mat>(size(m_Theta[1]));
+        vector<mat> Theta_grad;
+        Theta_grad.reserve(m_Theta.capacity());
+        for(unsigned i=0;i<m_Theta.capacity();++i)
+            Theta_grad.push_back(zeros<mat>(size(m_Theta[i])));
         Inputs = join_horiz(ones<mat>(InputSize,1), Inputs); //Add the weights from the bias neuron.
         mat output_tmp = zeros<mat>(10,1);
         for(int i=0; i<InputSize; ++i){
@@ -412,29 +420,24 @@ namespace IntelliDetect{
 
             mat delta_3 = activation3-output_tmp;
             mat delta_2 = trans(m_Theta[1].cols(1,m_Theta[1].n_cols-1))*delta_3%activationGradient(layers[0].t());
-            //mat delta_2_check = trans(m_Theta2.cols(1,m_Theta2.n_cols-1))*delta_3%numericalGradient(z2);
+            //mat delta_2_check = trans(m_Theta[1].cols(1,m_Theta[1].n_cols-1))*delta_3%numericalGradient(layers[0].t());
             //cout<<"Diff in activation grad and num_grad: "<<accu(delta_2-delta_2_check)<<endl;
-            Theta1_grad += delta_2*Inputs.row(i);
-            Theta2_grad += delta_3*activation2;
+            Theta_grad[0] += delta_2*Inputs.row(i);
+            Theta_grad[1] += delta_3*activation2;
             output_tmp(as_scalar(Outputs(i)),0) = 0;
         }
         cout<<"\tCost(unregularized) = "<<cost;
         trainSetCosts.push_back(cost);
-        cost += accu(square(m_Theta[0].cols(1,m_Theta[0].n_cols-1)))*regularizationParameter/(2.0*InputSize);
 
-        //Put in loop
-        cost += accu(square(m_Theta[1].cols(1,m_hiddenLayerSizes[0])))*regularizationParameter/(2.0*InputSize);
+        for(unsigned i=0;i<m_Theta.capacity();++i){
+            cost += accu(square(m_Theta[0].cols(1,m_Theta[0].n_cols-1)))*regularizationParameter/(2.0*InputSize);
+            Theta_grad[i] /= InputSize;
+            Theta_grad[i] += join_horiz(zeros<mat>(m_Theta[i].n_rows,1), (regularizationParameter/InputSize)*m_Theta[i].cols(1,m_Theta[i].n_cols-1));
+            m_Theta[i] -= learningRate*Theta_grad[i];
+        }
 
         cout<<"\t\tCost (regularized) = "<<cost<<endl;
         trainSetCostsReg.push_back(cost);
-        Theta1_grad /= InputSize;
-        Theta2_grad /= InputSize;
-
-        Theta1_grad += join_horiz(zeros<mat>(m_Theta[0].n_rows,1), (regularizationParameter/InputSize)*m_Theta[0].cols(1,m_Theta[0].n_cols-1));
-        Theta2_grad += join_horiz(zeros<mat>(m_Theta[1].n_rows,1), (regularizationParameter/InputSize)*m_Theta[1].cols(1,m_Theta[1].n_cols-1));
-
-        m_Theta[0] -= learningRate*Theta1_grad;
-        m_Theta[1] -= learningRate*Theta2_grad;
     }
 
     void network::train(double regularizationParameter = 0.25,double learningRate = 0.05,double momentumConstant = 1){
