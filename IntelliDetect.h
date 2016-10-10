@@ -92,6 +92,7 @@ namespace IntelliDetect{
             m_hiddenLayerSizes.reserve(hiddenLayerCount);
         }
         else status = false;
+
         if(properties.isSet(Property::layers::inputLayerSize))
             m_inputLayerSize = stoi(properties.getProperty(Property::layers::inputLayerSize));
         else status = false;
@@ -105,6 +106,7 @@ namespace IntelliDetect{
         if(properties.isSet(Property::layers::outputLayerSize))
             m_outputLayerSize = stoi(properties.getProperty(Property::layers::outputLayerSize));
         else status = false;
+
         if(properties.isSet(Property::saveLocation))
             m_paramPath = properties.getProperty(Property::saveLocation);
         return status;
@@ -177,9 +179,12 @@ namespace IntelliDetect{
     }
 
     void network::randInitWeights(){
+        int hiddenLayerCount = m_hiddenLayerSizes.capacity();
         if(checkLayerSizes()){
             m_Theta[0] = randWeights(m_hiddenLayerSizes[0], m_inputLayerSize+1);
-            m_Theta[1] = randWeights(m_outputLayerSize,m_hiddenLayerSizes[0]+1);
+            for(int i=1;i<hiddenLayerCount;++i)
+                m_Theta[i] = randWeights(m_hiddenLayerSizes[i-1],m_hiddenLayerSizes[i]+1);
+            m_Theta[hiddenLayerCount] = randWeights(m_outputLayerSize,m_hiddenLayerSizes[hiddenLayerCount-1]+1);
         }
         else cout<<"Error: trying to initialize weights without setting layer sizes"<<endl;
     }
@@ -218,12 +223,20 @@ namespace IntelliDetect{
             status = false;
         if(status){
             nn_params = nn_params.rows(hiddenLayerCount+1,nn_params.n_rows-1);
-            m_Theta[0] = reshape(nn_params.rows(0,(m_inputLayerSize+1)*(m_hiddenLayerSizes[0])-1),m_hiddenLayerSizes[0],m_inputLayerSize+1);
-            m_Theta[1] = reshape(nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSizes[0]),nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSizes[0]+1);
+            int prevSize = 0;
+            int currentSize = (m_inputLayerSize+1)*(m_hiddenLayerSizes[0])-1;
+            m_Theta[0] = reshape(nn_params.rows(prevSize,currentSize),m_hiddenLayerSizes[0],m_inputLayerSize+1);
+            prevSize = currentSize+1;
+            for(int i=1;i<hiddenLayerCount;++i){
+                currentSize = (m_hiddenLayerSizes[i]-1)*m_hiddenLayerSizes[i];
+                m_Theta[i] = reshape(nn_params.rows(prevSize,currentSize),m_hiddenLayerSizes[i],m_hiddenLayerSizes[i-1]+1);
+                prevSize = currentSize+1;
+            }
+            m_Theta[hiddenLayerCount] = reshape(nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSizes[hiddenLayerCount-1]),nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSizes[hiddenLayerCount-1]+1);
         }
         else{
             if(properties.isSet(Property::saveLocation))
-                nn_params.save(properties.getProperty(Property::saveLocation)+string("parameters.csv.back"));
+                nn_params.save(properties.getProperty(Property::saveLocation)+string("parameters.csv.back"), csv_ascii);
             randInitWeights();
         }
 
@@ -316,13 +329,13 @@ namespace IntelliDetect{
 
         //Save weights
         int hiddenLayerCount = m_hiddenLayerSizes.capacity();
-        mat hyper_params = zeros<mat>(1,hiddenLayerCount+2);
-        hyper_params.at(0) =  static_cast<double>(m_inputLayerSize);
+        mat hyper_params = zeros<mat>(hiddenLayerCount+2,1);
+        hyper_params(0,0) =  m_inputLayerSize;
 
         for(int i=0;i<hiddenLayerCount;++i)
-            hyper_params.at(i) = static_cast<double>(m_hiddenLayerSizes[i]);
+            hyper_params(i+1,0) = m_hiddenLayerSizes[i];
 
-        hyper_params.at(hiddenLayerCount+1) = static_cast<double>(m_outputLayerSize);
+        hyper_params(hiddenLayerCount+1,0) = m_outputLayerSize;
 
         mat nn_params = join_vert(vectorise(m_Theta[0]),vectorise(m_Theta[1]));
         mat tmp_params = join_vert(vectorise(hyper_params),nn_params);
