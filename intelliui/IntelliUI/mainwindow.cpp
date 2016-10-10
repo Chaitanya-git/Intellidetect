@@ -8,7 +8,6 @@
 
 using namespace QtCharts;
 using IntelliDetect::network;
-using IntelliDetect::propertyTree;
 
 QString fileName;
 network* net = new network(IntelliDetect::sigmoid, IntelliDetect::sigmoidGradient);
@@ -66,12 +65,12 @@ void MainWindow::on_actionTrain_from_file_triggered()
             QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
             propertyTree prop;
             prop.data = string(INTELLI_VERSION);
-            prop.setProperty(IntelliDetect::Property::Id,Id.toUtf8().toStdString());
-            prop.setProperty(IntelliDetect::Property::hiddenLayerCount,"1");
-            prop.setProperty(IntelliDetect::Property::layers::inputLayerSize,"784");
-            prop.setProperty(IntelliDetect::Property::layers::hiddenLayerSize(0),"100");
-            prop.setProperty(IntelliDetect::Property::layers::outputLayerSize,"10");
-            prop.setProperty(IntelliDetect::Property::saveLocation, param_path.toUtf8().toStdString());
+            prop.setProperty(Property::Id,Id.toUtf8().toStdString());
+            prop.setProperty(Property::hiddenLayerCount,"1");
+            prop.setProperty(Property::layers::inputLayerSize,"784");
+            prop.setProperty(Property::layers::hiddenLayerSize(0),"100");
+            prop.setProperty(Property::layers::outputLayerSize,"10");
+            prop.setProperty(Property::saveLocation, param_path.toUtf8().toStdString());
             net = new network(prop);
         }
         net->load(fileNames);
@@ -125,11 +124,11 @@ void MainWindow::on_actionNew_network_triggered()
     QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
     propertyTree prop;
     prop.data = string(INTELLI_VERSION);
-    prop.setProperty(IntelliDetect::Property::Id,Id.toUtf8().toStdString());
-    prop.setProperty(IntelliDetect::Property::hiddenLayerCount,"1");
-    prop.setProperty(IntelliDetect::Property::layers::inputLayerSize,"784");
-    prop.setProperty(IntelliDetect::Property::layers::hiddenLayerSize(0),"100");
-    prop.setProperty(IntelliDetect::Property::layers::outputLayerSize,"10");
+    prop.setProperty(Property::Id,Id.toUtf8().toStdString());
+    prop.setProperty(Property::hiddenLayerCount,"1");
+    prop.setProperty(Property::layers::inputLayerSize,"784");
+    prop.setProperty(Property::layers::hiddenLayerSize(0),"100");
+    prop.setProperty(Property::layers::outputLayerSize,"10");
     net = new network(prop);
 }
 

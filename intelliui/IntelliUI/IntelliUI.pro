@@ -27,6 +27,9 @@ SOURCES += main.cpp\
         mainwindow.cpp
 INCLUDEPATH += "../../"
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    ../../proptree.h \
+    ../../constants.h \
+    ../../IntelliDetect.h
 FORMS    += mainwindow.ui
 
