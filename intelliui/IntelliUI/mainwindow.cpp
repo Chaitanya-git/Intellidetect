@@ -3,26 +3,24 @@
 #include "QFileDialog"
 #include <QtCharts>
 #include <QInputDialog>
-#include <armadillo>
 #include <IntelliDetect.h>
+#include <armadillo>
 
 using namespace QtCharts;
 using IntelliDetect::network;
 using IntelliDetect::propertyTree;
-IntelliDetect::network *net;
 
 QString fileName;
+network* net = new network(IntelliDetect::sigmoid, IntelliDetect::sigmoidGradient);
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    net = new network(IntelliDetect::sigmoid, IntelliDetect::sigmoidGradient);
 }
 
 MainWindow::~MainWindow()
 {
-    delete net;
     delete ui;
 }
 
@@ -66,7 +64,8 @@ void MainWindow::on_actionTrain_from_file_triggered()
         if(net->getPath().empty()){
             QString param_path = QFileDialog::getExistingDirectory(this, tr("Choose location to save data"));
             QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
-            propertyTree prop = net->getProperties();
+            propertyTree prop;
+            prop.data = string(INTELLI_VERSION);
             prop.setProperty(IntelliDetect::Property::Id,Id.toUtf8().toStdString());
             prop.setProperty(IntelliDetect::Property::hiddenLayerCount,"1");
             prop.setProperty(IntelliDetect::Property::layers::inputLayerSize,"784");

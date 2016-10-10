@@ -8,7 +8,7 @@
 #include <utility>
 #include <ctime>
 #include <sys/stat.h>
-#define INTELLI_VERSION "2.2.1"
+#define INTELLI_VERSION "2.2.2"
 
 /* This header file contains definitions for functions for handling various ANN processes */
 
@@ -93,7 +93,6 @@ namespace IntelliDetect{
         prop.close();
         return true;
     }
-
     void propertyTree::setProperty(string property, string value){
         bool flag=false;
         string nodeName(""),propName("");
@@ -215,7 +214,6 @@ namespace IntelliDetect{
             mat m_Theta1, m_Theta2;
             int m_inputLayerSize,m_outputLayerSize;
             vector<int> m_hiddenLayerSizes;
-            vector<int> m_hiddenLayerSizes;
             string m_paramPath;
             vector<string> m_inpPaths;
             mat (*activation)(mat);
@@ -250,11 +248,10 @@ namespace IntelliDetect{
             bool save(string);
             double accuracy(mat&, mat&);
             string getPath();
-            propertyTree getProperties();
     };
 
     mat network::numericalGradient(mat z){
-        const double h = 1e-10;
+        double h = 1e-10;
         return (activation(z+h)-activation(z))/h;
     }
 
@@ -268,20 +265,11 @@ namespace IntelliDetect{
         else status = false;
         if(properties.isSet(Property::layers::inputLayerSize))
             m_inputLayerSize = stoi(properties.getProperty(Property::layers::inputLayerSize));
-        else{
+        else status = false;
 
         for(int i=0;i<hiddenLayerCount;++i){
             if(properties.isSet(Property::layers::hiddenLayerSize(i)))
                 m_hiddenLayerSizes[i] = stoi(properties.getProperty(Property::layers::hiddenLayerSize(i)));
-        for(unsigned int i=0;i<m_hiddenLayerSizes.capacity();++i){
-            string layerSize = "layers.hiddenLayerSize"+to_string(i);
-            if(properties.isSet(layerSize))
-                m_hiddenLayerSizes.push_back(stoi(properties.getProperty(layerSize)));
-            else{
-                //m_hiddenLayerSizes.push_back(10);
-                status = false;
-            }
-        }
             else status = false;
         }
 
@@ -310,7 +298,6 @@ namespace IntelliDetect{
         m_hiddenLayerSizes.reserve(1);
         m_hiddenLayerSizes[0] = HdSize;
         m_outputLayerSize = OpSize;
-        m_Theta.reserve(2);
         activation = activationPtr;
         activationGradient = activationGradientPtr;
         buildPropertyTree();
@@ -380,10 +367,6 @@ namespace IntelliDetect{
             m_Theta2 = randWeights(m_outputLayerSize,m_hiddenLayerSizes[0]+1);
         }
         else cout<<"Error: trying to initialize weights without setting layer sizes"<<endl;
-            m_Theta.push_back(randWeights(m_hiddenLayerSizes[i],m_hiddenLayerSizes[i-1]+1));
-        }
-        m_Theta.push_back(randWeights(m_outputLayerSize,m_hiddenLayerSizes[0]+1));
-        m_nn_params = join_vert(vectorise(m_Theta[0]),vectorise(m_Theta[1])); //the weights in a more manageable format
     }
 
     void network::constructParameters(string path){
@@ -685,7 +668,6 @@ namespace IntelliDetect{
             backpropogate(Input, Label, regularizationParameter, learningRate);
             mat out = predict(Input);
             mat conf = output(Input);
-            m_Theta[1] = reshape(m_nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSizes[0]),m_nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSizes[0]+1);
             cout<<"out.at(0) = "<<out.at(0)<<endl<<"confidence = "<<conf(0)<<endl;
             if(out.at(0) == label && conf(0)>0.5)
                 break;
@@ -703,10 +685,6 @@ namespace IntelliDetect{
 
     string network::getPath(){
         return m_paramPath;
-    }
-
-    propertyTree network::getProperties(){
-        return properties;
     }
 
     class ConvNet :public network{
