@@ -13,12 +13,9 @@ QString fileName;
 
 propertyTree buildDefaultConfig(){
     propertyTree prop;
-    prop.data = string(INTELLI_VERSION);
-    prop.setProperty(Property::Id,"DefaultNetwork");
-    prop.setProperty(Property::hiddenLayerCount,"1");
-    prop.setProperty(Property::layers::inputLayerSize,"784");
-    prop.setProperty(Property::layers::hiddenLayerSize(0),"100");
-    prop.setProperty(Property::layers::outputLayerSize,"10");
+    bool status = prop.load("/home/chaitanya/Development/IntelliDetect 2.1/intelliui/IntelliUI/network.conf.default");
+    if(!status)
+        cout<<"Unable to open default configuration file!"<<endl;
     return prop;
 }
 

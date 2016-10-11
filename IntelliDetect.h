@@ -67,7 +67,7 @@ namespace IntelliDetect{
             mat predict(string);
             mat output(string);
             mat output(mat);
-            void backpropogate(mat, mat, double, double);
+            void backpropogate(mat, mat, double, double, double);
             mat numericalGradient(mat);
             void train(double, double, double);
             void train(string, int, double, double, double);
@@ -399,52 +399,68 @@ namespace IntelliDetect{
         return output(inputMat);
     }
 
-    void network::backpropogate(mat Inputs, mat Outputs, double regularizationParameter, double learningRate){
+    void network::backpropogate(mat Inputs, mat Outputs, double regularizationParameter, double learningRate, double momentumConst){
         int InputSize = Inputs.n_rows;
         long double cost = 0;
-//        mat Theta_grad[0] = zeros<mat>(size(m_Theta[0]));
-//        mat Theta_grad[1] = zeros<mat>(size(m_Theta[1]));
-        vector<mat> Theta_grad;
-        Theta_grad.reserve(m_Theta.capacity());
+
+        static bool firstFunctionCall = false;
+        static vector<mat> Theta_grad_prev(m_Theta.capacity());     //To handle momentum
+        vector<mat> Theta_grad(m_Theta.capacity());
+        vector<mat> act(m_Theta.capacity());
+        vector<mat> delta(m_Theta.capacity());
+
+        if(!firstFunctionCall){
+            for(unsigned i=0;i<m_Theta.capacity();++i)
+                Theta_grad_prev[i] = zeros<mat>(size(m_Theta[i]));
+            firstFunctionCall=true;
+        }
+
         for(unsigned i=0;i<m_Theta.capacity();++i)
-            Theta_grad.push_back(zeros<mat>(size(m_Theta[i])));
+            Theta_grad[i] = zeros<mat>(size(m_Theta[i]));
+
         Inputs = join_horiz(ones<mat>(InputSize,1), Inputs); //Add the weights from the bias neuron.
         mat output_tmp = zeros<mat>(10,1);
+
         for(int i=0; i<InputSize; ++i){
             vector<mat> layers = forwardPass(Inputs.row(i).cols(0,Inputs.n_cols-2));
-            mat activation3 = sigmoid(layers.back().t());
-            mat activation2 = join_horiz(ones<mat>(1,1),sigmoid(layers[0]));
+            act[act.capacity()-1] = layers.back().t();
+            for(unsigned i=0;i<act.capacity()-1;++i)
+                act[i] = join_horiz(ones<mat>(1,1),sigmoid(layers[i]));
             output_tmp(as_scalar(Outputs(i))) = 1;
 
-            cost += as_scalar(accu(output_tmp%log(activation3)+(1-output_tmp)%log(1-activation3)))/InputSize*(-1);
+            cost += as_scalar(accu(output_tmp%log(act.back())+(1-output_tmp)%log(1-act.back())))/InputSize*(-1);
 
-            mat delta_3 = activation3-output_tmp;
-            mat delta_2 = trans(m_Theta[1].cols(1,m_Theta[1].n_cols-1))*delta_3%activationGradient(layers[0].t());
+            delta[delta.capacity()-1] = act.back()-output_tmp;
+            for(int i=delta.capacity()-2;i>=0;--i)
+                delta[i] = trans(m_Theta[i+1].cols(1,m_Theta[i+1].n_cols-1))*delta[i+1]%activationGradient(layers[i].t());
             //mat delta_2_check = trans(m_Theta[1].cols(1,m_Theta[1].n_cols-1))*delta_3%numericalGradient(layers[0].t());
             //cout<<"Diff in activation grad and num_grad: "<<accu(delta_2-delta_2_check)<<endl;
-            Theta_grad[0] += delta_2*Inputs.row(i);
-            Theta_grad[1] += delta_3*activation2;
+            Theta_grad[0] += delta[0]*Inputs.row(i);
+            for(unsigned i=1;i<Theta_grad.capacity();++i)
+                Theta_grad[i] += delta[i]*act[i-1];
             output_tmp(as_scalar(Outputs(i)),0) = 0;
         }
         cout<<"\tCost(unregularized) = "<<cost;
         trainSetCosts.push_back(cost);
 
         for(unsigned i=0;i<m_Theta.capacity();++i){
-            cost += accu(square(m_Theta[0].cols(1,m_Theta[0].n_cols-1)))*regularizationParameter/(2.0*InputSize);
+            cost += accu(square(m_Theta[0].cols(1,m_Theta[0].n_cols-1)))*regularizationParameter/(2.0*InputSize); //Add regularization terms
             Theta_grad[i] /= InputSize;
-            Theta_grad[i] += join_horiz(zeros<mat>(m_Theta[i].n_rows,1), (regularizationParameter/InputSize)*m_Theta[i].cols(1,m_Theta[i].n_cols-1));
+            Theta_grad[i] += join_horiz(zeros<mat>(m_Theta[i].n_rows,1), (regularizationParameter/InputSize)*m_Theta[i].cols(1,m_Theta[i].n_cols-1)); //Add regularization terms
+            Theta_grad[i] += momentumConst*Theta_grad_prev[i];
             m_Theta[i] -= learningRate*Theta_grad[i];
+            Theta_grad_prev[i] = Theta_grad[i];
         }
 
         cout<<"\t\tCost (regularized) = "<<cost<<endl;
         trainSetCostsReg.push_back(cost);
     }
 
-    void network::train(double regularizationParameter = 0.25,double learningRate = 0.05,double momentumConstant = 1){
+    void network::train(double regularizationParameter = 0.25,double learningRate = 0.05,double momentumConstant = 0.01){
         properties.setProperty(Property::hyperParameters::regularizationParameter,to_string(regularizationParameter));
         properties.setProperty(Property::hyperParameters::learningRate,to_string(learningRate));
         properties.setProperty(Property::hyperParameters::momentumConstant,to_string(momentumConstant));
-        int Total = m_Inputs.n_rows, batch_size = m_Inputs.n_rows/100, IterCnt = 50;
+        int Total = m_Inputs.n_rows, batch_size = m_Inputs.n_rows/100, IterCnt = 35;
         if(!batch_size){
             batch_size = 1;
             IterCnt = 10;
@@ -460,7 +476,7 @@ namespace IntelliDetect{
                 cout<<"Batch "<<k+1<<endl;
                 for(int i=0; i<IterCnt; ++i){
                     cout<<"\tIteration "<<i+1<<endl;
-                    backpropogate(Input_batch, Label_batch, regularizationParameter, learningRate);
+                    backpropogate(Input_batch, Label_batch, regularizationParameter, learningRate, momentumConstant);
                 }
             }
             acc = accuracy(m_Inputs, m_Lables);
@@ -480,7 +496,7 @@ namespace IntelliDetect{
         save(m_paramPath);
     }
 
-    void network::train(string input, int label, double regularizationParameter = 0.5,double learningRate = 0.05,double momentumConstant = 1){//regularization parameter and learning rate and a momentum constant
+    void network::train(string input, int label, double regularizationParameter = 0.5,double learningRate = 0.05,double momentumConstant = 0){//regularization parameter and learning rate and a momentum constant
         properties.setProperty(Property::hyperParameters::regularizationParameter,to_string(regularizationParameter));
         properties.setProperty(Property::hyperParameters::learningRate,to_string(learningRate));
         properties.setProperty(Property::hyperParameters::momentumConstant,to_string(momentumConstant));
@@ -497,7 +513,7 @@ namespace IntelliDetect{
         int i=0;
         while(1){
             cout<<"\tIteration "<<++i<<endl;
-            backpropogate(Input, Label, regularizationParameter, learningRate);
+            backpropogate(Input, Label, regularizationParameter, learningRate, momentumConstant);
             mat out = predict(Input);
             mat conf = output(Input);
             cout<<"out.at(0) = "<<out.at(0)<<endl<<"confidence = "<<conf(0)<<endl;

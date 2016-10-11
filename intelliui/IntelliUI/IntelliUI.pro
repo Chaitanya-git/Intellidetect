@@ -33,3 +33,6 @@ HEADERS  += mainwindow.h \
     ../../IntelliDetect.h
 FORMS    += mainwindow.ui
 
+DISTFILES += \
+    network.conf.default
+
