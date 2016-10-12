@@ -19,8 +19,7 @@ propertyTree buildDefaultConfig(){
     return prop;
 }
 
-network* net = new network(buildDefaultConfig(), IntelliDetect::sigmoid, IntelliDetect::sigmoidGradient);
-
+network* net = new network(buildDefaultConfig());
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -86,7 +85,7 @@ void MainWindow::on_actionTrain_for_current_input_triggered()
 {
     string fileStr = fileName.toUtf8().constData();
     int Label = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),0,0,9);
-    net->train(fileStr, Label, 0.25,0.001,0.001);
+    net->train(fileStr, Label);
 }
 
 void MainWindow::on_actionLoad_network_from_file_triggered()

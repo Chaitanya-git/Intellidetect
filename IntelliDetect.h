@@ -78,8 +78,8 @@ namespace IntelliDetect{
             mat output(mat);
             void backpropogate(mat, mat, double, double, double);
             mat numericalGradient(mat);
-            void train(double, double, double);
-            void train(string, int, double, double, double);
+            void train();
+            void train(string, int);
             bool load(vector<string>, int, int);
             bool load(string, int, int);
             bool load(mat&,mat&);
@@ -147,7 +147,7 @@ namespace IntelliDetect{
     }
 
     void network::randInitWeights(){
-        int hiddenLayerCount = m_hiddenLayerSizes.capacity();
+        const int hiddenLayerCount = m_hiddenLayerSizes.capacity();
         m_Theta[0] = randWeights(m_hiddenLayerSizes[0], m_inputLayerSize+1);
         for(int i=1;i<hiddenLayerCount;++i)
             m_Theta[i] = randWeights(m_hiddenLayerSizes[i],m_hiddenLayerSizes[i-1]+1);
@@ -170,7 +170,7 @@ namespace IntelliDetect{
 
     bool network::constructWeightsFromParameters(mat &nn_params){
         bool status = true;
-        int hiddenLayerCount = m_hiddenLayerSizes.capacity();
+        const int hiddenLayerCount = m_hiddenLayerSizes.capacity();
 
         //Check if sizes provided match with sizes stored with the parameters
         for(int i=0;i<hiddenLayerCount;++i)
@@ -415,10 +415,15 @@ namespace IntelliDetect{
         trainSetCostsReg.push_back(cost);
     }
 
-    void network::train(double regularizationParameter = 0.25,double learningRate = 0.05,double momentumConstant = 0.01){
-        properties.setProperty(Property::hyperParameters::regularizationParameter,to_string(regularizationParameter));
-        properties.setProperty(Property::hyperParameters::learningRate,to_string(learningRate));
-        properties.setProperty(Property::hyperParameters::momentumConstant,to_string(momentumConstant));
+    void network::train(){
+        double regularizationParameter = stod(properties.getProperty(Property::hyperParameters::regularizationParameter));
+        double learningRate = stod(properties.getProperty(Property::hyperParameters::learningRate));
+        double momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
+
+        if(!learningRate){
+            cout<<"No learning rate provided. Aborting..."<<endl;
+            return;
+        }
         int Total = m_Inputs.n_rows, batch_size = m_Inputs.n_rows/100, IterCnt = 35;
         if(!batch_size){
             batch_size = 1;
@@ -428,20 +433,17 @@ namespace IntelliDetect{
 
         cout<<"Prediction Accuracy before training: "<<accuracy(m_Inputs, m_Lables)<<endl<<endl;
         double acc;
-        do{
-            for(int k = 0;k<Total/batch_size; ++k){
-                mat Input_batch = m_Inputs.rows(batch_size*(k),batch_size*(k+1)-1);
-                mat Label_batch = m_Lables.rows(batch_size*(k),batch_size*(k+1)-1);
-                cout<<"Batch "<<k+1<<endl;
-                for(int i=0; i<IterCnt; ++i){
-                    cout<<"\tIteration "<<i+1<<endl;
-                    backpropogate(Input_batch, Label_batch, regularizationParameter, learningRate, momentumConstant);
-                }
+        for(int k = 0;k<Total/batch_size; ++k){
+            mat Input_batch = m_Inputs.rows(batch_size*(k),batch_size*(k+1)-1);
+            mat Label_batch = m_Lables.rows(batch_size*(k),batch_size*(k+1)-1);
+            cout<<"Batch "<<k+1<<endl;
+            for(int i=0; i<IterCnt; ++i){
+                cout<<"\tIteration "<<i+1<<endl;
+                backpropogate(Input_batch, Label_batch, regularizationParameter, learningRate, momentumConstant);
             }
-            acc = accuracy(m_Inputs, m_Lables);
-            cout<<"Prediction Accuracy on training set: "<<acc<<endl;
-        }while(acc<70);
-
+        }
+        acc = accuracy(m_Inputs, m_Lables);
+        cout<<"Prediction Accuracy on training set: "<<acc<<endl;
         if(m_inpPaths.size()-1){
             if(load(m_inpPaths.at(m_inpPaths.size()-1))==true){
                 cout<<"\n\nUsing test set"<<endl;
@@ -455,10 +457,11 @@ namespace IntelliDetect{
         save(m_paramPath);
     }
 
-    void network::train(string input, int label, double regularizationParameter = 0.5,double learningRate = 0.05,double momentumConstant = 0){//regularization parameter and learning rate and a momentum constant
-        properties.setProperty(Property::hyperParameters::regularizationParameter,to_string(regularizationParameter));
-        properties.setProperty(Property::hyperParameters::learningRate,to_string(learningRate));
-        properties.setProperty(Property::hyperParameters::momentumConstant,to_string(momentumConstant));
+    //TODO: remove need for this.
+    void network::train(string input, int label){//regularization parameter and learning rate and a momentum constant
+        double regularizationParameter = stod(properties.getProperty(Property::hyperParameters::regularizationParameter));
+        double learningRate = stod(properties.getProperty(Property::hyperParameters::learningRate));
+        double momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
 
         cout<<"\n\tStarting individual training.\n\n";
 
@@ -494,7 +497,7 @@ namespace IntelliDetect{
         return m_paramPath;
     }
 
-    class ConvNet{
+    class ConvNet: public network{
             mat m_Inputs,m_Lables;
             int m_imgHt,m_imgWth, m_strideLn;
             vector<int> m_convSizes;
@@ -509,7 +512,7 @@ namespace IntelliDetect{
             mat output(mat);
     };
 
-    ConvNet::ConvNet(propertyTree properties):m_FCnet(properties){
+    ConvNet::ConvNet(propertyTree properties):network(properties),m_FCnet(properties){
         m_properties = properties;
 //        m_imgHt = properties.;
 //        m_imgWth = imgWth;
