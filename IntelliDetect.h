@@ -416,19 +416,31 @@ namespace IntelliDetect{
     }
 
     void network::train(){
-        double regularizationParameter = stod(properties.getProperty(Property::hyperParameters::regularizationParameter));
-        double learningRate = stod(properties.getProperty(Property::hyperParameters::learningRate));
-        double momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
+        double regularizationParameter = 0, learningRate = 0, momentumConstant = 0;
+        int Total = m_Inputs.n_rows;
+        int IterCnt = 0, batch_size = Total/100;
 
-        if(!learningRate){
-            cout<<"No learning rate provided. Aborting..."<<endl;
+        //Get hyperParameters from property tree
+        if(properties.isSet(Property::hyperParameters::regularizationParameter))
+            regularizationParameter = stod(properties.getProperty(Property::hyperParameters::regularizationParameter));
+        if(properties.isSet(Property::hyperParameters::learningRate))
+            learningRate = stod(properties.getProperty(Property::hyperParameters::learningRate));
+        else{
+            cout<<"No valid learning rate provided. Aborting..."<<endl;
             return;
         }
-        int Total = m_Inputs.n_rows, batch_size = m_Inputs.n_rows/100, IterCnt = 35;
-        if(!batch_size){
-            batch_size = 1;
-            IterCnt = 10;
+        if(properties.isSet(Property::hyperParameters::momentumConstant))
+            double momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
+        if(properties.isSet(Property::hyperParameters::iterCount))
+            IterCnt = stoi(properties.getProperty(Property::hyperParameters::iterCount));
+        else{
+            cout<<"IterCount either set to 0 or not provided. Exiting...";
+            return;
         }
+        if(properties.isSet(Property::hyperParameters::batchSize))
+            batch_size = stoi(properties.getProperty(Property::hyperParameters::batchSize));
+
+
         cout<<"\n\tStarting batch training.\n\n";
 
         cout<<"Prediction Accuracy before training: "<<accuracy(m_Inputs, m_Lables)<<endl<<endl;
@@ -458,10 +470,23 @@ namespace IntelliDetect{
     }
 
     //TODO: remove need for this.
+    //Possible fix: return a struct with all sorts of training stats. Handle this outside.
     void network::train(string input, int label){//regularization parameter and learning rate and a momentum constant
-        double regularizationParameter = stod(properties.getProperty(Property::hyperParameters::regularizationParameter));
-        double learningRate = stod(properties.getProperty(Property::hyperParameters::learningRate));
-        double momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
+        double regularizationParameter = 0, learningRate = 0, momentumConstant = 0;
+        int Total = m_Inputs.n_rows;
+        int IterCnt = 0, batch_size = Total/100;
+
+        //Get hyperParameters from property tree
+        if(properties.isSet(Property::hyperParameters::regularizationParameter))
+            regularizationParameter = stod(properties.getProperty(Property::hyperParameters::regularizationParameter));
+        if(properties.isSet(Property::hyperParameters::learningRate))
+            learningRate = stod(properties.getProperty(Property::hyperParameters::learningRate));
+        else{
+            cout<<"No valid learning rate provided. Aborting..."<<endl;
+            return;
+        }
+        if(properties.isSet(Property::hyperParameters::momentumConstant))
+            double momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
 
         cout<<"\n\tStarting individual training.\n\n";
 

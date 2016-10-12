@@ -10,3 +10,4 @@ hyperParameters =
         regularizationParameter = 0.25
         learningRate = 0.05
         momentumConstant = 0.0
+        iterCount = 35

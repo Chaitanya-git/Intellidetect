@@ -17,6 +17,8 @@ namespace Property {
         const string regularizationParameter = "hyperParameters.regularizationParameter";
         const string learningRate = "hyperParameters.learningRate";
         const string momentumConstant = "hyperParameters.momentumConstant";
+        const string iterCount = "hyperParameters.iterCount";
+        const string batchSize = "hyperParameters.batchSize";
     }
 }
 
