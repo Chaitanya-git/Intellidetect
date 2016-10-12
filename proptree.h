@@ -29,6 +29,8 @@ bool propertyTree::load(string path){
         getline(prop, line);
         if(line[0]=='/' && line[1] == '/')
             continue;
+        else if(line[0] == '\t' || line[0] == ' ')
+            ++level;
         string propName,value;
         bool flag = false;
         for(unsigned int i=0;i<line.length();++i){
@@ -41,8 +43,6 @@ bool propertyTree::load(string path){
                 value.append(&line[i],1);
             else if(line[i]!='\t')
                 propName.append(&line[i],1);
-            else
-                ++level;
         }
         if(!value.length())
             if(level>=prevProps.size())

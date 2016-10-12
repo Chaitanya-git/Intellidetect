@@ -86,7 +86,7 @@ void MainWindow::on_actionTrain_for_current_input_triggered()
 {
     string fileStr = fileName.toUtf8().constData();
     int Label = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),0,0,9);
-    net->train(fileStr, Label, 0.0,0.0001);
+    net->train(fileStr, Label, 0.25,0.001,0.001);
 }
 
 void MainWindow::on_actionLoad_network_from_file_triggered()

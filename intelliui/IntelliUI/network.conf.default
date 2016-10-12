@@ -1,0 +1,13 @@
+//Intellidetect Configuration file
+version = Version 2.2.2
+Id = DefaultNetwork
+hiddenLayerCount = 1
+layers =
+        inputLayerSize = 784
+        hiddenLayerSize = 100
+        outputLayerSize = 10
+        hiddenLayerSize0 = 100
+hyperParameters =
+        regularizationParameter = 0.250000
+        learningRate = 0.025000
+        momentumConstant = 0.025000

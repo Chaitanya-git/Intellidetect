@@ -39,6 +39,17 @@ namespace IntelliDetect{
         return randu(Lin,Lout)*(2*epsilon) - epsilon;
     }
 
+    bool validatePropTree(propertyTree &properties){
+        if(!properties.isSet(Property::layers::inputLayerSize)) return false;
+        if(!properties.isSet(Property::layers::outputLayerSize)) return false;
+        if(!properties.isSet(Property::hiddenLayerCount)) return false;
+        int hiddenLayerCount = 0;
+        hiddenLayerCount = stoi(properties.getProperty(Property::hiddenLayerCount));
+        for(int i=0;i<hiddenLayerCount;++i)
+            if(!properties.isSet(Property::layers::hiddenLayerSize(i))) return false;
+        return true;
+    }
+
     class network{
             mat m_Inputs,m_Lables;
             vector<mat> m_Theta;
@@ -49,12 +60,10 @@ namespace IntelliDetect{
             mat (*activation)(mat);
             mat (*activationGradient)(mat);
             propertyTree properties;
-            bool initializeFromPropertyTree();
+            void initializeFromPropertyTree();
             void randInitWeights();
             bool constructWeightsFromParameters(mat&);
             void constructParameters(string);
-            bool checkLayerSizes();
-            void buildPropertyTree();
             vector<mat> forwardPass(mat);
 
         public:
@@ -84,43 +93,17 @@ namespace IntelliDetect{
         return (activation(z+h)-activation(z))/h;
     }
 
-    bool network::initializeFromPropertyTree(){
-        bool status = true;
+    void network::initializeFromPropertyTree(){
         int hiddenLayerCount = 0;
-        if(properties.isSet(Property::hiddenLayerCount)){
-            hiddenLayerCount = stoi(properties.getProperty(Property::hiddenLayerCount));
-            m_hiddenLayerSizes.reserve(hiddenLayerCount);
-        }
-        else status = false;
+        hiddenLayerCount = stoi(properties.getProperty(Property::hiddenLayerCount));
+        m_hiddenLayerSizes.reserve(hiddenLayerCount);
+        m_inputLayerSize = stoi(properties.getProperty(Property::layers::inputLayerSize));
 
-        if(properties.isSet(Property::layers::inputLayerSize))
-            m_inputLayerSize = stoi(properties.getProperty(Property::layers::inputLayerSize));
-        else status = false;
+        for(int i=0;i<hiddenLayerCount;++i)
+            m_hiddenLayerSizes[i] = stoi(properties.getProperty(Property::layers::hiddenLayerSize(i)));
 
-        for(int i=0;i<hiddenLayerCount;++i){
-            if(properties.isSet(Property::layers::hiddenLayerSize(i)))
-                m_hiddenLayerSizes[i] = stoi(properties.getProperty(Property::layers::hiddenLayerSize(i)));
-            else status = false;
-        }
-
-        if(properties.isSet(Property::layers::outputLayerSize))
-            m_outputLayerSize = stoi(properties.getProperty(Property::layers::outputLayerSize));
-        else status = false;
-
-        if(properties.isSet(Property::saveLocation))
-            m_paramPath = properties.getProperty(Property::saveLocation);
-        return status;
-    }
-
-    void network::buildPropertyTree(){
-        properties.data = string("Version ")+string(INTELLI_VERSION);
-        properties.setPropertyIfNotSet(Property::Id,"TestNetwork");
-        properties.setPropertyIfNotSet(Property::hiddenLayerCount,to_string(m_hiddenLayerSizes.capacity()));
-        properties.setPropertyIfNotSet(Property::layers::inputLayerSize,to_string(m_inputLayerSize));
-        for(unsigned int i=0;i<m_hiddenLayerSizes.capacity();++i)
-            properties.setPropertyIfNotSet(Property::layers::hiddenLayerSize(i),to_string(m_hiddenLayerSizes[i]));
-        properties.setPropertyIfNotSet(Property::layers::outputLayerSize,to_string(m_outputLayerSize));
-        properties.setPropertyIfNotSet(Property::saveLocation,m_paramPath);
+        m_outputLayerSize = stoi(properties.getProperty(Property::layers::outputLayerSize));
+        m_paramPath = properties.getProperty(Property::saveLocation);
     }
 
     network::network(string path,mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient){
@@ -131,10 +114,10 @@ namespace IntelliDetect{
         properties.load(path+string("network.conf"));
         properties.setProperty(Property::saveLocation,path);
 
-        bool status = initializeFromPropertyTree();
-        if(!status)
+        if(!validatePropTree(properties))
             cout<<"Error: provided configuration is incomplete"<<endl;
 
+        initializeFromPropertyTree();
         constructParameters(path+string("parameters.csv"));
 
         fstream trainStat;
@@ -156,37 +139,19 @@ namespace IntelliDetect{
     network::network(propertyTree props,mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient){
         activation = activationPtr;
         activationGradient = activationGradientPtr;
-        properties = props;
-        bool status = initializeFromPropertyTree();
-        constructParameters("");
-        if(!status)
+        if(!validatePropTree(props))
             cout<<"Error: Provided property tree is incomplete"<<endl;
-    }
-
-    bool network::checkLayerSizes(){
-        bool layerSizesSet = true;
-        if(!(properties.isSet(Property::layers::inputLayerSize) &&
-           properties.isSet(Property::layers::outputLayerSize)))
-            layerSizesSet = false;
-        int hiddenLayerCount = 0;
-        if(properties.isSet(Property::hiddenLayerCount))
-            hiddenLayerCount = stoi(properties.getProperty(Property::hiddenLayerCount));
-        else layerSizesSet = false;
-        for(int i=0;i<hiddenLayerCount;++i)
-            if(!properties.isSet(Property::layers::hiddenLayerSize(i)))
-                layerSizesSet=false;
-        return layerSizesSet;
+        properties = props;
+        initializeFromPropertyTree();
+        constructParameters("");
     }
 
     void network::randInitWeights(){
         int hiddenLayerCount = m_hiddenLayerSizes.capacity();
-        if(checkLayerSizes()){
-            m_Theta[0] = randWeights(m_hiddenLayerSizes[0], m_inputLayerSize+1);
-            for(int i=1;i<hiddenLayerCount;++i)
-                m_Theta[i] = randWeights(m_hiddenLayerSizes[i],m_hiddenLayerSizes[i-1]+1);
-            m_Theta[hiddenLayerCount] = randWeights(m_outputLayerSize,m_hiddenLayerSizes[hiddenLayerCount-1]+1);
-        }
-        else cout<<"Error: trying to initialize weights without setting layer sizes"<<endl;
+        m_Theta[0] = randWeights(m_hiddenLayerSizes[0], m_inputLayerSize+1);
+        for(int i=1;i<hiddenLayerCount;++i)
+            m_Theta[i] = randWeights(m_hiddenLayerSizes[i],m_hiddenLayerSizes[i-1]+1);
+        m_Theta[hiddenLayerCount] = randWeights(m_outputLayerSize,m_hiddenLayerSizes[hiddenLayerCount-1]+1);
     }
 
     void network::constructParameters(string path){
@@ -204,23 +169,16 @@ namespace IntelliDetect{
     }
 
     bool network::constructWeightsFromParameters(mat &nn_params){
-        bool layerSizesSet = checkLayerSizes();
-        //Problem: checkLayerSizes checks with propTree, but there's no way to know if variables have been initialized with proptree values
-        //Possible fix: Stop using seperate variables. Directly fetch values from propTree.
         bool status = true;
         int hiddenLayerCount = m_hiddenLayerSizes.capacity();
-        if(!layerSizesSet){
-            m_inputLayerSize = as_scalar(nn_params(0));
-            for(int i=0;i<hiddenLayerCount;++i)
-                m_hiddenLayerSizes[i] = as_scalar(nn_params(i+1));
-            m_outputLayerSize = as_scalar(nn_params(hiddenLayerCount+1));
-            buildPropertyTree();
-        }
+
+        //Check if sizes provided match with sizes stored with the parameters
         for(int i=0;i<hiddenLayerCount;++i)
             if(!(m_hiddenLayerSizes[i] == as_scalar(nn_params(i+1))))
                 status = false;
         if(!(m_inputLayerSize == as_scalar(nn_params(0)) && m_outputLayerSize == as_scalar(nn_params(hiddenLayerCount+1))))
             status = false;
+
         if(status){
             nn_params = nn_params.rows(hiddenLayerCount+1,nn_params.n_rows-1);
             int prevSize = 0;
@@ -349,6 +307,7 @@ namespace IntelliDetect{
         configFile.close();
         return true;
     }
+
     vector<mat> network::forwardPass(mat Input){
         vector<mat> layers;
         layers.reserve(m_hiddenLayerSizes.capacity()+1);
@@ -483,7 +442,7 @@ namespace IntelliDetect{
             cout<<"Prediction Accuracy on training set: "<<acc<<endl;
         }while(acc<70);
 
-        if(m_inpPaths.size()){
+        if(m_inpPaths.size()-1){
             if(load(m_inpPaths.at(m_inpPaths.size()-1))==true){
                 cout<<"\n\nUsing test set"<<endl;
                 cout<<"Prediction Accuracy on test set: "<<accuracy(m_Inputs, m_Lables)<<endl;
@@ -492,7 +451,7 @@ namespace IntelliDetect{
                 cout<<"Could not load test set. Training may be incomplete."<<endl;
         }
         else
-            cout<<"No training set provided."<<endl;
+            cout<<"No test set provided."<<endl;
         save(m_paramPath);
     }
 
