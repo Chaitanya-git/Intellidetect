@@ -8,6 +8,7 @@
 #include <ctime>
 #include <sys/stat.h>
 #include <proptree.h>
+#include <stdexcept>
 #define INTELLI_VERSION "2.2.2"
 
 /* This header file contains definitions for functions for handling various ANN processes */
@@ -16,6 +17,13 @@ using namespace arma;
 using namespace std;
 
 namespace IntelliDetect{
+
+    class invalidConfigException: public exception{
+        virtual const char* what() const throw()
+          {
+            return "Provided configuration is incomplete";
+          }
+    };
 
     mat sigmoid(mat z){
         return 1.0/(1.0 + exp(-z));
@@ -76,7 +84,7 @@ namespace IntelliDetect{
             mat predict(string);
             mat output(string);
             mat output(mat);
-            void backpropogate(mat, mat, double, double, double);
+            vector<mat> backpropogate(mat, mat, double);
             mat numericalGradient(mat);
             void train();
             void train(string, int);
@@ -112,10 +120,12 @@ namespace IntelliDetect{
         activation = activationPtr;
         activationGradient = activationGradientPtr;
         properties.load(path+string("network.conf"));
+        int len = properties.getProperty(Property::Id).length();
+        path.erase(path.length()-len-1);
         properties.setProperty(Property::saveLocation,path);
-        cout<<properties.toString();
+
         if(!validatePropTree(properties))
-            cout<<"Error: provided configuration is incomplete"<<endl;
+            throw invalidConfigException();
 
         initializeFromPropertyTree();
         constructParameters(path+string("parameters.csv"));
@@ -140,7 +150,7 @@ namespace IntelliDetect{
         activation = activationPtr;
         activationGradient = activationGradientPtr;
         if(!validatePropTree(props))
-            cout<<"Error: Provided property tree is incomplete"<<endl;
+            throw invalidConfigException();
         properties = props;
         initializeFromPropertyTree();
         constructParameters("");
@@ -251,7 +261,7 @@ namespace IntelliDetect{
             return false;
         }
         if(Labels.n_cols>1){
-            cout<<"network::load() error: Labels cannot be a vector";
+            cout<<"network::load() error: Labels have to be a vector";
             return false;
         }
         m_Inputs = Inputs;
@@ -358,21 +368,13 @@ namespace IntelliDetect{
         return output(inputMat);
     }
 
-    void network::backpropogate(mat Inputs, mat Outputs, double regularizationParameter, double learningRate, double momentumConst){
+    vector<mat> network::backpropogate(mat Inputs, mat Outputs, double regularizationParameter){
         int InputSize = Inputs.n_rows;
         long double cost = 0;
 
-        static bool firstFunctionCall = false;
-        static vector<mat> Theta_grad_prev(m_Theta.capacity());     //To handle momentum
         vector<mat> Theta_grad(m_Theta.capacity());
         vector<mat> act(m_Theta.capacity());
         vector<mat> delta(m_Theta.capacity());
-
-        if(!firstFunctionCall){
-            for(unsigned i=0;i<m_Theta.capacity();++i)
-                Theta_grad_prev[i] = zeros<mat>(size(m_Theta[i]));
-            firstFunctionCall=true;
-        }
 
         for(unsigned i=0;i<m_Theta.capacity();++i)
             Theta_grad[i] = zeros<mat>(size(m_Theta[i]));
@@ -406,20 +408,17 @@ namespace IntelliDetect{
             cost += accu(square(m_Theta[0].cols(1,m_Theta[0].n_cols-1)))*regularizationParameter/(2.0*InputSize); //Add regularization terms
             Theta_grad[i] /= InputSize;
             Theta_grad[i] += join_horiz(zeros<mat>(m_Theta[i].n_rows,1), (regularizationParameter/InputSize)*m_Theta[i].cols(1,m_Theta[i].n_cols-1)); //Add regularization terms
-            Theta_grad[i] += momentumConst*Theta_grad_prev[i];
-            m_Theta[i] -= learningRate*Theta_grad[i];
-            Theta_grad_prev[i] = Theta_grad[i];
         }
-
         cout<<"\t\tCost (regularized) = "<<cost<<endl;
         trainSetCostsReg.push_back(cost);
+
+        return Theta_grad;
     }
 
     void network::train(){
         double regularizationParameter = 0, learningRate = 0, momentumConstant = 0;
         int Total = m_Inputs.n_rows;
         int IterCnt = 0, batch_size = Total/100;
-
         //Get hyperParameters from property tree
         if(properties.isSet(Property::hyperParameters::regularizationParameter))
             regularizationParameter = stod(properties.getProperty(Property::hyperParameters::regularizationParameter));
@@ -446,13 +445,26 @@ namespace IntelliDetect{
 
         cout<<"Prediction Accuracy before training: "<<accuracy(m_Inputs, m_Lables)<<endl<<endl;
         double acc;
+        vector<mat> Theta_grad_prev(m_Theta.capacity());     //To handle momentum
         for(int k = 0;k<Total/batch_size; ++k){
             mat Input_batch = m_Inputs.rows(batch_size*(k),batch_size*(k+1)-1);
             mat Label_batch = m_Lables.rows(batch_size*(k),batch_size*(k+1)-1);
+
+            for(unsigned i=0;i<m_Theta.capacity();++i)
+                Theta_grad_prev[i] = zeros<mat>(size(m_Theta[i]));
+
+
             cout<<"Batch "<<k+1<<endl;
             for(int i=0; i<IterCnt; ++i){
                 cout<<"\tIteration "<<i+1<<endl;
-                backpropogate(Input_batch, Label_batch, regularizationParameter, learningRate, momentumConstant);
+
+                vector<mat> Theta_grad = backpropogate(Input_batch, Label_batch, regularizationParameter);
+
+                for(unsigned i=0;i<m_Theta.capacity();++i){
+                    Theta_grad[i] += momentumConstant*Theta_grad_prev[i];
+                    m_Theta[i] -= learningRate*Theta_grad[i];
+                    Theta_grad_prev[i] = Theta_grad[i];
+                }
             }
         }
         acc = accuracy(m_Inputs, m_Lables);
@@ -474,7 +486,6 @@ namespace IntelliDetect{
     //Possible fix: return a struct with all sorts of training stats. Handle this outside.
     void network::train(string input, int label){//regularization parameter and learning rate and a momentum constant
         double regularizationParameter = 0, learningRate = 0, momentumConstant = 0;
-        int Total = m_Inputs.n_rows;
 
         //Get hyperParameters from property tree
         if(properties.isSet(Property::hyperParameters::regularizationParameter))
@@ -496,11 +507,18 @@ namespace IntelliDetect{
         Input.reshape(1,784);
         Label.at(0) = label;
         cout<<"Overall Prediction Accuracy before training: "<<accuracy(Input, Label)<<endl<<endl;
-
+        vector<mat> Theta_grad_prev(m_Theta.capacity());     //To handle momentum
+        for(unsigned i=0;i<m_Theta.capacity();++i)
+            Theta_grad_prev[i] = zeros<mat>(size(m_Theta[i]));
         int i=0;
         while(1){
             cout<<"\tIteration "<<++i<<endl;
-            backpropogate(Input, Label, regularizationParameter, learningRate, momentumConstant);
+            vector<mat> Theta_grad = backpropogate(Input, Label, regularizationParameter);
+            for(unsigned i=0;i<m_Theta.capacity();++i){
+                Theta_grad[i] += momentumConstant*Theta_grad_prev[i];
+                m_Theta[i] -= learningRate*Theta_grad[i];
+                Theta_grad_prev[i] = Theta_grad[i];
+            }
             mat out = predict(Input);
             mat conf = output(Input);
             cout<<"out.at(0) = "<<out.at(0)<<endl<<"confidence = "<<conf(0)<<endl;
