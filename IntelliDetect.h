@@ -113,7 +113,7 @@ namespace IntelliDetect{
         activationGradient = activationGradientPtr;
         properties.load(path+string("network.conf"));
         properties.setProperty(Property::saveLocation,path);
-
+        cout<<properties.toString();
         if(!validatePropTree(properties))
             cout<<"Error: provided configuration is incomplete"<<endl;
 
@@ -378,7 +378,7 @@ namespace IntelliDetect{
             Theta_grad[i] = zeros<mat>(size(m_Theta[i]));
 
         Inputs = join_horiz(ones<mat>(InputSize,1), Inputs); //Add the weights from the bias neuron.
-        mat output_tmp = zeros<mat>(10,1);
+        mat output_tmp = zeros<mat>(m_outputLayerSize,1);
 
         for(int i=0; i<InputSize; ++i){
             vector<mat> layers = forwardPass(Inputs.row(i).cols(0,Inputs.n_cols-2));
@@ -426,11 +426,12 @@ namespace IntelliDetect{
         if(properties.isSet(Property::hyperParameters::learningRate))
             learningRate = stod(properties.getProperty(Property::hyperParameters::learningRate));
         else{
+            cout<<properties.getProperty(Property::hyperParameters::learningRate);
             cout<<"No valid learning rate provided. Aborting..."<<endl;
             return;
         }
         if(properties.isSet(Property::hyperParameters::momentumConstant))
-            double momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
+            momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
         if(properties.isSet(Property::hyperParameters::iterCount))
             IterCnt = stoi(properties.getProperty(Property::hyperParameters::iterCount));
         else{
@@ -474,7 +475,6 @@ namespace IntelliDetect{
     void network::train(string input, int label){//regularization parameter and learning rate and a momentum constant
         double regularizationParameter = 0, learningRate = 0, momentumConstant = 0;
         int Total = m_Inputs.n_rows;
-        int IterCnt = 0, batch_size = Total/100;
 
         //Get hyperParameters from property tree
         if(properties.isSet(Property::hyperParameters::regularizationParameter))
@@ -486,7 +486,7 @@ namespace IntelliDetect{
             return;
         }
         if(properties.isSet(Property::hyperParameters::momentumConstant))
-            double momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
+            momentumConstant = stod(properties.getProperty(Property::hyperParameters::momentumConstant));
 
         cout<<"\n\tStarting individual training.\n\n";
 
