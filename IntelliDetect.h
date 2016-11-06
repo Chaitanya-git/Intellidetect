@@ -81,11 +81,11 @@ namespace IntelliDetect{
             vector<long double> trainSetCosts;
             network(string,mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat));
             network(propertyTree,mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat));
-            mat predict(mat);
-            mat predict(string);
-            mat output(string);
-            mat output(mat);
-            vector<mat> backpropogate(mat, mat, double);
+            virtual mat predict(mat);
+            virtual mat predict(string);
+            virtual mat output(string);
+            virtual mat output(mat);
+            virtual vector<mat> backpropogate(mat, mat, double);
             mat numericalGradient(mat);
             void train();
             void train(string, int);
@@ -545,9 +545,10 @@ namespace IntelliDetect{
             int m_imgHt,m_imgWth, m_strideLn;
             vector<int> m_convSizes;
             vector<mat> m_kernels;
+            cube forwardPassConvLayers(cube);
         public:
             ConvNet(propertyTree);
-            mat backpropogate(mat, mat, double);
+            vector<mat> backpropogate(mat, mat, double);
             mat predict(mat);
             mat output(mat);
             vector<mat> forwardPass(cube);
@@ -573,27 +574,35 @@ namespace IntelliDetect{
         return output;
     }
 
-    cube pool(cube layer, int downSamplingFactor){
-        cube output = zeros<cube>(layer.n_rows/downSamplingFactor,layer.n_cols/downSamplingFactor,layer.n_slices);
+    cube pool(cube layer, int receptiveField){
+        cube output = zeros<cube>(layer.n_rows/receptiveField,layer.n_cols/receptiveField,layer.n_slices);
         for(unsigned int i=0;i<layer.n_slices;++i){
-            for(unsigned int j=0;(j+1)*downSamplingFactor<output.n_rows;++j)
-                for(unsigned int k=0;(k+1)*downSamplingFactor<output.n_cols;++k)
-                    output.slice(i).at(j,k) = accu(layer.slice(i).submat(j*downSamplingFactor,k*downSamplingFactor,
-                                                   (j+1)*downSamplingFactor,(k+1)*downSamplingFactor));
+            for(unsigned int j=0;(j+1)*receptiveField<output.n_rows;++j)
+                for(unsigned int k=0;(k+1)*receptiveField<output.n_cols;++k)
+                    output.slice(i).at(j,k) = accu(layer.slice(i).submat( j*receptiveField,
+                                                                          k*receptiveField,
+                                                                          (j+1)*receptiveField,
+                                                                          (k+1)*receptiveField
+                                                                         ));
         }
         return output;
     }
 
-    vector<mat> ConvNet::forwardPass(cube img){
+    cube ConvNet::forwardPassConvLayers(cube img){
         cout<<"running ConvNet::forwardPass"<<endl;
         cube convLayer = conv(img,m_kernels);
         cube activated = zeros<cube>(size(convLayer));
         for(unsigned int i=0;i<convLayer.n_slices;++i)
             activated.slice(i) = RectifiedLinearUnitActivation(convLayer.slice(i));
         cube pooledLayer = pool(activated,2);
-        mat input = vectorise(pooledLayer).t();
+        return pooledLayer;
+    }
+
+    vector<mat> ConvNet::forwardPass(cube img){
+        mat input = vectorise(forwardPassConvLayers(img)).t();
         return network::forwardPass(input);
     }
+
     mat ConvNet::predict(mat Input){
         Input.reshape(28,28);
         cube input(Input.n_rows,Input.n_cols,1);
@@ -606,6 +615,7 @@ namespace IntelliDetect{
         }
         return pred;
     }
+
     mat ConvNet::output(mat Input){
         cout<<"running ConvNet::output"<<endl;
         int InputSize = Input.n_rows;
@@ -620,6 +630,16 @@ namespace IntelliDetect{
             pred(i) = layers.back().row(i).max();
         }
         return pred;
+    }
+
+    vector<mat> ConvNet::backpropogate(mat Inputs, mat Labels, double regularizationParameter){
+        cout<<"running ConvNet::backpropogate";
+        Inputs.reshape(28,28);
+        cube INP(Inputs.n_rows,Inputs.n_cols,1);
+        INP.slice(0) = Inputs;
+        mat inp = vectorise(forwardPassConvLayers(INP)).t();
+        //backpropogation code for convolutional layers
+        return network::backpropogate(inp,Labels,regularizationParameter);
     }
 }
 #endif // INTELLIDETECT_H_INCLUDED
