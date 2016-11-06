@@ -59,6 +59,7 @@ namespace IntelliDetect{
     }
 
     class network{
+        protected:
             mat m_Inputs,m_Lables;
             vector<mat> m_Theta;
             int m_inputLayerSize,m_outputLayerSize;
@@ -541,39 +542,57 @@ namespace IntelliDetect{
     }
 
     class ConvNet: public network{
-            mat m_Inputs,m_Lables;
             int m_imgHt,m_imgWth, m_strideLn;
             vector<int> m_convSizes;
-            network m_FCnet;
             vector<mat> m_kernels;
-            propertyTree m_properties;
-            mat pool(mat,int);
         public:
             ConvNet(propertyTree);
             mat backpropogate(mat, mat, double);
             mat predict(mat);
             mat output(mat);
+            vector<mat> forwardPass(cube);
     };
 
-    ConvNet::ConvNet(propertyTree properties):network(properties),m_FCnet(properties){
-        m_properties = properties;
-//        m_imgHt = properties.;
-//        m_imgWth = imgWth;
-//        m_strideLn = strideLn;
+    ConvNet::ConvNet(propertyTree properties):network(properties){
+        this->properties = properties;
+        m_imgHt = 28;
+        m_imgWth = 28;
+        m_strideLn = 1;
 //        m_convSizes = convSizes;
 //        for(unsigned int i=0;i<m_convSizes.size();++i){
-//            for(int j=0;j<m_convSizes[i];++j)
-//                m_kernels.push_back(ones(kernelSize[i],kernelSize[i]));
+          for(int j=0;j<12;++j)
+            m_kernels.push_back(randWeights(3,3));
 //        }
-   }
+    }
 
-    mat ConvNet::pool(mat layer, int downsamplingFactor){
-        mat linearLayer = vectorise(layer);
-        mat downsampledLayer = zeros(linearLayer.n_rows/downsamplingFactor);
-        for(unsigned int i=0;i<downsampledLayer.n_rows;++i){
-            downsampledLayer(i,0) = linearLayer.rows(i*downsamplingFactor,(i+1)*downsamplingFactor-1).max();
+    cube conv(cube img, vector<mat> kernels){
+        cube output  = zeros<cube>(img.n_rows,img.n_cols,kernels.size());
+        for(unsigned int i=0;i<kernels.size();++i)
+            for(unsigned int j=0;j<output.n_slices;++j)
+                output.slice(j)= conv2(img.slice(i),kernels[i]);
+        return output;
+    }
+
+    cube pool(cube layer, int downSamplingFactor){
+        cube output = zeros<cube>(layer.n_rows/2,layer.n_cols/2,layer.n_slices);
+        for(unsigned int i=0;i<layer.n_slices;++i){
+            for(unsigned int j=0;j<output.n_rows;++j)
+                for(unsigned int k=0;k<output.n_cols;++k)
+                    output.slice(i).at(j,k) = accu(layer.slice(i).submat(j*downSamplingFactor,k*downSamplingFactor,
+                                                   (j+1)*downSamplingFactor,(k+1)*downSamplingFactor));
+
         }
-        return downsampledLayer;
+        return output;
+    }
+
+    vector<mat> ConvNet::forwardPass(cube img){
+        cube convLayer = conv(img,m_kernels);
+        cube activated = zeros<cube>(size(convLayer));
+        for(unsigned int i=0;i<convLayer.n_slices;++i)
+            activated.slice(i) = RectifiedLinearUnitActivation(convLayer.slice(i));
+        cube pooledLayer = pool(activated,28);
+        mat input = (vectorise(pooledLayer));
+        return network::forwardPass(input);
     }
 }
 #endif // INTELLIDETECT_H_INCLUDED
