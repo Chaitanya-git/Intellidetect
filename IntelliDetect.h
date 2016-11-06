@@ -560,39 +560,66 @@ namespace IntelliDetect{
         m_strideLn = 1;
 //        m_convSizes = convSizes;
 //        for(unsigned int i=0;i<m_convSizes.size();++i){
-          for(int j=0;j<12;++j)
+          for(int j=0;j<4;++j)
             m_kernels.push_back(randWeights(3,3));
 //        }
     }
 
     cube conv(cube img, vector<mat> kernels){
-        cube output  = zeros<cube>(img.n_rows,img.n_cols,kernels.size());
-        for(unsigned int i=0;i<kernels.size();++i)
+        cube output  = zeros<cube>(img.n_rows,img.n_cols,kernels.size()*img.n_slices);
+        for(unsigned int i=0;i<img.n_slices;++i)
             for(unsigned int j=0;j<output.n_slices;++j)
-                output.slice(j)= conv2(img.slice(i),kernels[i]);
+                output.slice(j+i)= conv2(img.slice(i),kernels[i],"same");
         return output;
     }
 
     cube pool(cube layer, int downSamplingFactor){
-        cube output = zeros<cube>(layer.n_rows/2,layer.n_cols/2,layer.n_slices);
+        cube output = zeros<cube>(layer.n_rows/downSamplingFactor,layer.n_cols/downSamplingFactor,layer.n_slices);
         for(unsigned int i=0;i<layer.n_slices;++i){
-            for(unsigned int j=0;j<output.n_rows;++j)
-                for(unsigned int k=0;k<output.n_cols;++k)
+            for(unsigned int j=0;(j+1)*downSamplingFactor<output.n_rows;++j)
+                for(unsigned int k=0;(k+1)*downSamplingFactor<output.n_cols;++k)
                     output.slice(i).at(j,k) = accu(layer.slice(i).submat(j*downSamplingFactor,k*downSamplingFactor,
                                                    (j+1)*downSamplingFactor,(k+1)*downSamplingFactor));
-
         }
         return output;
     }
 
     vector<mat> ConvNet::forwardPass(cube img){
+        cout<<"running ConvNet::forwardPass"<<endl;
         cube convLayer = conv(img,m_kernels);
         cube activated = zeros<cube>(size(convLayer));
         for(unsigned int i=0;i<convLayer.n_slices;++i)
             activated.slice(i) = RectifiedLinearUnitActivation(convLayer.slice(i));
-        cube pooledLayer = pool(activated,28);
-        mat input = (vectorise(pooledLayer));
+        cube pooledLayer = pool(activated,2);
+        mat input = vectorise(pooledLayer).t();
         return network::forwardPass(input);
+    }
+    mat ConvNet::predict(mat Input){
+        Input.reshape(28,28);
+        cube input(Input.n_rows,Input.n_cols,1);
+        input.slice(0) = Input;
+        vector<mat> layers = forwardPass(input);
+        int InputSize = input.n_slices;
+        mat pred = zeros(InputSize,1);
+        for(int i=0; i<InputSize; ++i){
+            pred(i) = layers.back().row(i).index_max();
+        }
+        return pred;
+    }
+    mat ConvNet::output(mat Input){
+        cout<<"running ConvNet::output"<<endl;
+        int InputSize = Input.n_rows;
+        Input.reshape(28,28);
+        cube input(Input.n_rows,Input.n_cols,1);
+        input.slice(0) = Input;
+        vector<mat> layers = forwardPass(input);
+        cout<<"Output: "<<layers.back()<<endl;
+        cout<<"Sum of outputs"<<accu(layers.back())<<endl;
+        mat pred = zeros(InputSize,1);
+        for(int i=0; i<InputSize; ++i){
+            pred(i) = layers.back().row(i).max();
+        }
+        return pred;
     }
 }
 #endif // INTELLIDETECT_H_INCLUDED
