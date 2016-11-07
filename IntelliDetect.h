@@ -541,10 +541,19 @@ namespace IntelliDetect{
         return m_paramPath;
     }
 
+    mat im2col(cube image, cube &kernel, int strideLen = 2){
+        int size = (image.n_cols-kernel.n_cols)/(strideLen+1);
+        mat output = zeros<mat>(kernel.n_cols*kernel.n_rows*kernel.n_slices,size);
+        for(int i=0;i<size;++i){
+            output.col(i) = vectorise(image.subcube(i*kernel.n_rows,i*kernel.n_cols,i*kernel.n_slices,
+                                                    (i+1)*kernel.n_rows, (i+1)*kernel.n_cols, (i+1)*kernel.n_slices));
+        }
+    }
+
     class ConvNet: public network{
-            int m_imgHt,m_imgWth, m_strideLn;
-            vector<int> m_convSizes;
+            int m_NoOfConvLayers, m_strideLn;
             vector<mat> m_kernels;
+            vector<mat> m_convLayerWeights;
             cube forwardPassConvLayers(cube);
         public:
             ConvNet(propertyTree);
@@ -556,18 +565,14 @@ namespace IntelliDetect{
 
     ConvNet::ConvNet(propertyTree properties):network(properties){
         this->properties = properties;
-        m_imgHt = 28;
-        m_imgWth = 28;
+        m_NoOfConvLayers = 5;
         m_strideLn = 1;
-//        m_convSizes = convSizes;
-//        for(unsigned int i=0;i<m_convSizes.size();++i){
-          for(int j=0;j<4;++j)
+        for(int j=0;j<4;++j)
             m_kernels.push_back(randWeights(3,3));
-//        }
     }
 
     cube conv(cube img, vector<mat> kernels){
-        cube output  = zeros<cube>(img.n_rows,img.n_cols,kernels.size()*img.n_slices);
+        cube output  = zeros<cube>(img.n_rows,img.n_cols,kernels.size());//*img.n_slices);
         for(unsigned int i=0;i<img.n_slices;++i)
             for(unsigned int j=0;j<output.n_slices;++j)
                 output.slice(j+i)= conv2(img.slice(i),kernels[i],"same");
@@ -583,7 +588,7 @@ namespace IntelliDetect{
                                                                           k*receptiveField,
                                                                           (j+1)*receptiveField,
                                                                           (k+1)*receptiveField
-                                                                         ));
+                                                                         ));//max pooling
         }
         return output;
     }
@@ -599,7 +604,8 @@ namespace IntelliDetect{
     }
 
     vector<mat> ConvNet::forwardPass(cube img){
-        mat input = vectorise(forwardPassConvLayers(img)).t();
+        cube pooledLayer = forwardPassConvLayers(img);
+        mat input = vectorise(pooledLayer).t();
         return network::forwardPass(input);
     }
 
@@ -639,7 +645,12 @@ namespace IntelliDetect{
         INP.slice(0) = Inputs;
         mat inp = vectorise(forwardPassConvLayers(INP)).t();
         //backpropogation code for convolutional layers
-        return network::backpropogate(inp,Labels,regularizationParameter);
+        vector<mat> grads = network::backpropogate(inp,Labels,regularizationParameter);
+        //vector<mat> convGrad;
+        inp = join_horiz(inp,ones<mat>(1,1));
+        for(int i=0;i<m_kernels.size();++i)
+            m_kernels[i] -= conv2(grads[0],m_kernels[i])%RectifiedLinearUnitActivationGradient(inp);
+        return grads;
     }
 }
 #endif // INTELLIDETECT_H_INCLUDED
