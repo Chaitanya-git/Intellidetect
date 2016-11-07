@@ -73,7 +73,7 @@ namespace IntelliDetect{
             void randInitWeights();
             bool constructWeightsFromParameters(mat&);
             void constructParameters(string);
-            vector<mat> forwardPass(mat);
+            virtual vector<mat> forwardPass(mat);
 
         public:
 
@@ -85,7 +85,7 @@ namespace IntelliDetect{
             virtual mat predict(string);
             virtual mat output(string);
             virtual mat output(mat);
-            virtual vector<mat> backpropogate(mat, mat, double);
+            vector<mat> backpropogate(mat, mat, double);
             mat numericalGradient(mat);
             void train();
             void train(string, int);
@@ -542,33 +542,51 @@ namespace IntelliDetect{
     }
 
     mat im2col(cube image, cube &kernel, int strideLen = 2){
-        int size = (image.n_cols-kernel.n_cols)/(strideLen+1);
-        mat output = zeros<mat>(kernel.n_cols*kernel.n_rows*kernel.n_slices,size);
-        for(int i=0;i<size;++i){
-            output.col(i) = vectorise(image.subcube(i*kernel.n_rows,i*kernel.n_cols,i*kernel.n_slices,
-                                                    (i+1)*kernel.n_rows, (i+1)*kernel.n_cols, (i+1)*kernel.n_slices));
+        mat output = zeros<mat>(kernel.n_cols*kernel.n_rows*image.n_slices,0);
+        int i=0;
+        for(int j=0;(j+1)*kernel.n_rows<image.n_rows;++j){
+            for(int k=0;(k+1)*kernel.n_cols<image.n_cols;++k)
+                output = join_horiz(output, vectorise(image.subcube(j*kernel.n_rows,k*kernel.n_cols,0,
+                                                    (j+1)*kernel.n_rows-1, (k+1)*kernel.n_cols-1, image.n_slices-1)));
         }
+        return output;
+    }
+
+    mat generateKernelMatrix(vector<cube> kernel){
+        mat kernelMat(kernel[0].n_cols*kernel[0].n_rows*kernel[0].n_slices,kernel.size());
+        for(unsigned i=0;i<kernel.size();++i){
+            kernelMat.col(i) = vectorise(kernel[i]);
+        }
+        return kernelMat;
+    }
+
+    cube randWeights(int Lin, int Lout, int depth){
+        cube weights(Lin,Lout,depth);
+        for(int i=0;i<depth;++i)
+            weights.slice(i) = randWeights(Lin,Lout);
+        return weights;
     }
 
     class ConvNet: public network{
             int m_NoOfConvLayers, m_strideLn;
-            vector<mat> m_kernels;
+            vector<cube> m_kernels;
             vector<mat> m_convLayerWeights;
-            cube forwardPassConvLayers(cube);
+            mat forwardPassConvLayers(cube);
+            vector<mat> forwardPass(cube);
         public:
             ConvNet(propertyTree);
             vector<mat> backpropogate(mat, mat, double);
             mat predict(mat);
             mat output(mat);
-            vector<mat> forwardPass(cube);
     };
 
     ConvNet::ConvNet(propertyTree properties):network(properties){
         this->properties = properties;
         m_NoOfConvLayers = 5;
         m_strideLn = 1;
-        for(int j=0;j<4;++j)
-            m_kernels.push_back(randWeights(3,3));
+        for(int i=0;i<784;++i)
+            m_kernels.push_back(randWeights(3,3,1));
+        m_Theta.push_back(generateKernelMatrix(m_kernels));
     }
 
     cube conv(cube img, vector<mat> kernels){
@@ -593,19 +611,17 @@ namespace IntelliDetect{
         return output;
     }
 
-    cube ConvNet::forwardPassConvLayers(cube img){
+    mat ConvNet::forwardPassConvLayers(cube img){
         cout<<"running ConvNet::forwardPass"<<endl;
-        cube convLayer = conv(img,m_kernels);
-        cube activated = zeros<cube>(size(convLayer));
-        for(unsigned int i=0;i<convLayer.n_slices;++i)
-            activated.slice(i) = RectifiedLinearUnitActivation(convLayer.slice(i));
-        cube pooledLayer = pool(activated,2);
-        return pooledLayer;
+        mat convLayer = im2col(img,m_kernels[0]);
+        mat activated = RectifiedLinearUnitActivation(convLayer.t()*m_Theta.back());
+        //cube pooledLayer = pool(activated,2);
+        return activated;
     }
 
     vector<mat> ConvNet::forwardPass(cube img){
-        cube pooledLayer = forwardPassConvLayers(img);
-        mat input = vectorise(pooledLayer).t();
+        mat pooledLayer = forwardPassConvLayers(img);
+        mat input = pooledLayer;
         return network::forwardPass(input);
     }
 
@@ -638,19 +654,5 @@ namespace IntelliDetect{
         return pred;
     }
 
-    vector<mat> ConvNet::backpropogate(mat Inputs, mat Labels, double regularizationParameter){
-        cout<<"running ConvNet::backpropogate";
-        Inputs.reshape(28,28);
-        cube INP(Inputs.n_rows,Inputs.n_cols,1);
-        INP.slice(0) = Inputs;
-        mat inp = vectorise(forwardPassConvLayers(INP)).t();
-        //backpropogation code for convolutional layers
-        vector<mat> grads = network::backpropogate(inp,Labels,regularizationParameter);
-        //vector<mat> convGrad;
-        inp = join_horiz(inp,ones<mat>(1,1));
-        for(int i=0;i<m_kernels.size();++i)
-            m_kernels[i] -= conv2(grads[0],m_kernels[i])%RectifiedLinearUnitActivationGradient(inp);
-        return grads;
-    }
 }
 #endif // INTELLIDETECT_H_INCLUDED
