@@ -19,7 +19,7 @@ propertyTree buildDefaultConfig(){
     return prop;
 }
 
-ConvNet* net = new ConvNet(buildDefaultConfig());
+network* net = new network(buildDefaultConfig());
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -74,7 +74,7 @@ void MainWindow::on_actionTrain_from_file_triggered()
             QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
             propertyTree prop = buildDefaultConfig();
             prop.setProperty(Property::saveLocation, param_path.toUtf8().toStdString());
-            net = new ConvNet(prop);
+            net = new network(prop);
         }
         net->load(fileNames);
         net->train();
@@ -93,7 +93,7 @@ void MainWindow::on_actionLoad_network_from_file_triggered()
     QString net_params = QFileDialog::getExistingDirectory(this, tr("Select network folder"));
     if(!net_params.isEmpty()){
         string param = net_params.toUtf8().constData();
-    //    net = new ConvNet(param);
+        net = new network(param);
     }
 }
 
@@ -127,7 +127,7 @@ void MainWindow::on_actionNew_network_triggered()
     QString Id = QInputDialog::getText(this,tr("Enter a name for the network"),tr("Name:"));
     propertyTree prop = buildDefaultConfig();
     prop.setProperty(Property::Id,Id.toUtf8().toStdString());
-    net = new ConvNet(prop);
+    net = new network(prop);
 }
 
 void MainWindow::on_actionSave_triggered()

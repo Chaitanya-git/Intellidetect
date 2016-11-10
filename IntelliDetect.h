@@ -25,26 +25,26 @@ namespace IntelliDetect{
           }
     };
 
-    mat sigmoid(mat z){
+    fmat sigmoid(fmat z){
         return 1.0/(1.0 + exp(-z));
     }
 
-    mat sigmoidGradient(mat z){
-        mat g = sigmoid(z);
+    fmat sigmoidGradient(fmat z){
+        fmat g = sigmoid(z);
         return g%(1-g);         // '%'is the overloaded element wise multiplication operator.
     }
 
-    mat RectifiedLinearUnitActivation(mat z){
+    fmat RectifiedLinearUnitActivation(fmat z){
         return (z+abs(z))/2;
     }
 
-    mat RectifiedLinearUnitActivationGradient(mat z){
+    fmat RectifiedLinearUnitActivationGradient(fmat z){
         return (z+abs(z))/(2*z);
     }
 
-    mat randWeights(int Lin, int Lout){
+    fmat randWeights(int Lin, int Lout){
         const double epsilon = 0.52;
-        return randu(Lin,Lout)*(2*epsilon) - epsilon;
+        return randu<fmat>(Lin,Lout)*(2*epsilon) - epsilon;
     }
 
     bool validatePropTree(propertyTree &properties){
@@ -60,44 +60,44 @@ namespace IntelliDetect{
 
     class network{
         protected:
-            mat m_Inputs,m_Lables;
-            vector<mat> m_Theta;
+            fmat m_Inputs,m_Lables;
+            vector<fmat> m_Theta;
             int m_inputLayerSize,m_outputLayerSize;
             vector<int> m_hiddenLayerSizes;
             string m_paramPath;
             vector<string> m_inpPaths;
-            mat (*activation)(mat);
-            mat (*activationGradient)(mat);
+            fmat (*activation)(fmat);
+            fmat (*activationGradient)(fmat);
             propertyTree properties;
             void initializeFromPropertyTree();
             void randInitWeights();
-            bool constructWeightsFromParameters(mat&);
+            bool constructWeightsFromParameters(fmat&);
             void constructParameters(string);
-            virtual vector<mat> forwardPass(mat);
+            virtual vector<fmat> forwardPass(fmat);
 
         public:
 
             vector<long double> trainSetCostsReg;
             vector<long double> trainSetCosts;
-            network(string,mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat));
-            network(propertyTree,mat (*activationPtr)(mat), mat (*activationGradientPtr)(mat));
-            virtual mat predict(mat);
-            virtual mat predict(string);
-            virtual mat output(string);
-            virtual mat output(mat);
-            vector<mat> backpropogate(mat, mat, double);
-            mat numericalGradient(mat);
+            network(string,fmat (*activationPtr)(fmat), fmat (*activationGradientPtr)(fmat));
+            network(propertyTree,fmat (*activationPtr)(fmat), fmat (*activationGradientPtr)(fmat));
+            virtual fmat predict(fmat);
+            virtual fmat predict(string);
+            virtual fmat output(string);
+            virtual fmat output(fmat);
+            vector<fmat> backpropogate(fmat, fmat, double);
+            fmat numericalGradient(fmat);
             void train();
             void train(string, int);
             bool load(vector<string>, int, int);
             bool load(string, int, int);
-            bool load(mat&,mat&);
+            bool load(fmat&,fmat&);
             bool save(string);
-            double accuracy(mat&, mat&);
+            double accuracy(fmat&, fmat&);
             string getPath();
     };
 
-    mat network::numericalGradient(mat z){
+    fmat network::numericalGradient(fmat z){
         double h = 1e-10;
         return (activation(z+h)-activation(z))/h;
     }
@@ -109,21 +109,18 @@ namespace IntelliDetect{
         m_inputLayerSize = stoi(properties.getProperty(Property::layers::inputLayerSize));
 
         for(int i=0;i<hiddenLayerCount;++i)
-            m_hiddenLayerSizes[i] = stoi(properties.getProperty(Property::layers::hiddenLayerSize(i)));
+            m_hiddenLayerSizes.push_back(stoi(properties.getProperty(Property::layers::hiddenLayerSize(i))));
 
         m_outputLayerSize = stoi(properties.getProperty(Property::layers::outputLayerSize));
         m_paramPath = properties.getProperty(Property::saveLocation);
     }
 
-    network::network(string path,mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient){
+    network::network(string path,fmat (*activationPtr)(fmat) = sigmoid, fmat (*activationGradientPtr)(fmat) = sigmoidGradient){
         if(path.back()!='/')
             path.append("/",1);
         activation = activationPtr;
         activationGradient = activationGradientPtr;
         properties.load(path+string("network.conf"));
-        int len = properties.getProperty(Property::Id).length();
-        path.erase(path.length()-len-1);
-        properties.setProperty(Property::saveLocation,path);
 
         if(!validatePropTree(properties))
             throw invalidConfigException();
@@ -145,9 +142,12 @@ namespace IntelliDetect{
         }
 
         trainStat.close();
+        int len = properties.getProperty(Property::Id).length();
+        path.erase(path.length()-len-1);
+        properties.setProperty(Property::saveLocation,path);
     }
 
-    network::network(propertyTree props,mat (*activationPtr)(mat) = sigmoid, mat (*activationGradientPtr)(mat) = sigmoidGradient){
+    network::network(propertyTree props,fmat (*activationPtr)(fmat) = sigmoid, fmat (*activationGradientPtr)(fmat) = sigmoidGradient){
         activation = activationPtr;
         activationGradient = activationGradientPtr;
         if(!validatePropTree(props))
@@ -166,8 +166,8 @@ namespace IntelliDetect{
     }
 
     void network::constructParameters(string path){
-        mat nn_params;
-        m_Theta = vector<mat>(m_hiddenLayerSizes.capacity()+1);
+        fmat nn_params;
+        m_Theta = vector<fmat>(m_hiddenLayerSizes.capacity()+1);
         if(!nn_params.load(path)){
             cout<<"Randomly initialising weights."<<endl;
             randInitWeights();
@@ -179,7 +179,7 @@ namespace IntelliDetect{
         cout<<"Weights Initialized"<<endl;
     }
 
-    bool network::constructWeightsFromParameters(mat &nn_params){
+    bool network::constructWeightsFromParameters(fmat &nn_params){
         bool status = true;
         const int hiddenLayerCount = m_hiddenLayerSizes.capacity();
 
@@ -191,7 +191,7 @@ namespace IntelliDetect{
             status = false;
 
         if(status){
-            nn_params = nn_params.rows(hiddenLayerCount+1,nn_params.n_rows-1);
+            nn_params = nn_params.rows(hiddenLayerCount+2,nn_params.n_rows-1);
             int prevSize = 0;
             int currentSize = (m_inputLayerSize+1)*(m_hiddenLayerSizes[0])-1;
             m_Theta[0] = reshape(nn_params.rows(prevSize,currentSize),m_hiddenLayerSizes[0],m_inputLayerSize+1);
@@ -199,9 +199,9 @@ namespace IntelliDetect{
             for(int i=1;i<hiddenLayerCount;++i){
                 currentSize = (m_hiddenLayerSizes[i]-1)*m_hiddenLayerSizes[i];
                 m_Theta[i] = reshape(nn_params.rows(prevSize,currentSize),m_hiddenLayerSizes[i],m_hiddenLayerSizes[i-1]+1);
-                prevSize = currentSize+1;
+                prevSize += currentSize+1;
             }
-            m_Theta[hiddenLayerCount] = reshape(nn_params.rows((m_inputLayerSize+1)*(m_hiddenLayerSizes[hiddenLayerCount-1]),nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSizes[hiddenLayerCount-1]+1);
+            m_Theta[hiddenLayerCount] = reshape(nn_params.rows(prevSize,nn_params.size()-1), m_outputLayerSize, m_hiddenLayerSizes[hiddenLayerCount-1]+1);
         }
         else{
             if(properties.isSet(Property::saveLocation))
@@ -224,7 +224,7 @@ namespace IntelliDetect{
         }
 
         m_inpPaths = paths;
-        mat tmpX;
+        fmat tmpX;
         m_Inputs.resize(0,0);
         unsigned int i=0;
         do{
@@ -256,7 +256,7 @@ namespace IntelliDetect{
         return true;
     }
 
-    bool network::load(mat &Inputs, mat &Labels){
+    bool network::load(fmat &Inputs, fmat &Labels){
         if(Inputs.n_rows != Labels.n_rows){
             cout<<"network::load() error: Number of inputs do not match number of labels";
             return false;
@@ -298,7 +298,7 @@ namespace IntelliDetect{
 
         //Save weights
         int hiddenLayerCount = m_hiddenLayerSizes.capacity();
-        mat hyper_params = zeros<mat>(hiddenLayerCount+2,1);
+        fmat hyper_params = zeros<fmat>(hiddenLayerCount+2,1);
         hyper_params(0,0) =  m_inputLayerSize;
 
         for(int i=0;i<hiddenLayerCount;++i)
@@ -306,8 +306,10 @@ namespace IntelliDetect{
 
         hyper_params(hiddenLayerCount+1,0) = m_outputLayerSize;
 
-        mat nn_params = join_vert(vectorise(m_Theta[0]),vectorise(m_Theta[1]));
-        mat tmp_params = join_vert(vectorise(hyper_params),nn_params);
+        fmat nn_params(0,0);
+        for(int i=0;i<m_Theta.size();++i)
+            nn_params = join_vert(nn_params,vectorise(m_Theta[i]));
+        fmat tmp_params = join_vert(vectorise(hyper_params),nn_params);
         tmp_params.save((fullpath+string("parameters.csv")),csv_ascii);
 
         //Save propertyTree
@@ -319,75 +321,75 @@ namespace IntelliDetect{
         return true;
     }
 
-    vector<mat> network::forwardPass(mat Input){
-        vector<mat> layers;
+    vector<fmat> network::forwardPass(fmat Input){
+        vector<fmat> layers;
         layers.reserve(m_hiddenLayerSizes.capacity()+1);
         int InputSize = Input.n_rows;
-        Input = join_horiz(ones<mat>(InputSize,1),Input);
+        Input = join_horiz(ones<fmat>(InputSize,1),Input);
         layers.push_back(Input*trans(m_Theta[0]));
-        mat tmp;
+        fmat tmp;
         for(unsigned i=1;i<=m_hiddenLayerSizes.capacity();++i){
-            tmp = join_horiz(ones<mat>(layers[i-1].n_rows,1),activation(layers[i-1]));
+            tmp = join_horiz(ones<fmat>(layers[i-1].n_rows,1),activation(layers[i-1]));
             layers.push_back(tmp*trans(m_Theta[i]));
         }
         layers[layers.capacity()-1] = sigmoid(layers.back());
         return layers;
     }
 
-    mat network::predict(mat Input){
-        vector<mat> layers = forwardPass(Input);
+    fmat network::predict(fmat Input){
+        vector<fmat> layers = forwardPass(Input);
         int InputSize = Input.n_rows;
-        mat pred = zeros(InputSize,1);
+        fmat pred = zeros<fmat>(InputSize,1);
         for(int i=0; i<InputSize; ++i){
             pred(i) = layers.back().row(i).index_max();
         }
         return pred;
     }
-    mat network::output(mat Input){
+    fmat network::output(fmat Input){
         int InputSize = Input.n_rows;
-        vector<mat> layers = forwardPass(Input);
+        vector<fmat> layers = forwardPass(Input);
         cout<<"Output: "<<layers.back()<<endl;
         cout<<"Sum of outputs"<<accu(layers.back())<<endl;
-        mat pred = zeros(InputSize,1);
+        fmat pred = zeros<fmat>(InputSize,1);
         for(int i=0; i<InputSize; ++i){
             pred(i) = layers.back().row(i).max();
         }
         return pred;
 
     }
-    mat network::predict(string input){
-        mat inputMat;
+    fmat network::predict(string input){
+        fmat inputMat;
         inputMat.load(input);
         inputMat.reshape(1,784);
         return predict(inputMat);
     }
 
-    mat network::output(string input){
-        mat inputMat;
+    fmat network::output(string input){
+        fmat inputMat;
         inputMat.load(input);
         inputMat.reshape(1,784);
         return output(inputMat);
     }
 
-    vector<mat> network::backpropogate(mat Inputs, mat Outputs, double regularizationParameter){
+    vector<fmat> network::backpropogate(fmat Inputs, fmat Outputs, double regularizationParameter){
         int InputSize = Inputs.n_rows;
         long double cost = 0;
 
-        vector<mat> Theta_grad(m_Theta.capacity());
-        vector<mat> act(m_Theta.capacity());
-        vector<mat> delta(m_Theta.capacity());
+        vector<fmat> Theta_grad(m_Theta.capacity());
+        vector<fmat> act(m_Theta.capacity());
+        vector<fmat> delta(m_Theta.capacity());
 
         for(unsigned i=0;i<m_Theta.capacity();++i)
-            Theta_grad[i] = zeros<mat>(size(m_Theta[i]));
+            Theta_grad[i] = zeros<fmat>(size(m_Theta[i]));
 
-        Inputs = join_horiz(ones<mat>(InputSize,1), Inputs); //Add the weights from the bias neuron.
-        mat output_tmp = zeros<mat>(m_outputLayerSize,1);
+        Inputs = join_horiz(ones<fmat>(InputSize,1), Inputs); //Add the weights from the bias neuron.
+        fmat output_tmp = zeros<fmat>(m_outputLayerSize,1);
 
         for(int i=0; i<InputSize; ++i){
-            vector<mat> layers = forwardPass(Inputs.row(i).cols(0,Inputs.n_cols-2));
+            vector<fmat> layers = forwardPass(Inputs.row(i).cols(0,Inputs.n_cols-2));
             act[act.capacity()-1] = layers.back().t();
             for(unsigned i=0;i<act.capacity()-1;++i)
-                act[i] = join_horiz(ones<mat>(1,1),sigmoid(layers[i]));
+                act[i] = join_horiz(ones<fmat>(1,1),sigmoid(layers[i]));
             output_tmp(as_scalar(Outputs(i))) = 1;
 
             cost += as_scalar(accu(output_tmp%log(act.back())+(1-output_tmp)%log(1-act.back())))/InputSize*(-1);
@@ -402,15 +404,15 @@ namespace IntelliDetect{
                 Theta_grad[i] += delta[i]*act[i-1];
             output_tmp(as_scalar(Outputs(i)),0) = 0;
         }
-        cout<<"\tCost(unregularized) = "<<cost;
+        //cout<<"\tCost(unregularized) = "<<cost;
         trainSetCosts.push_back(cost);
 
         for(unsigned i=0;i<m_Theta.capacity();++i){
             cost += accu(square(m_Theta[0].cols(1,m_Theta[0].n_cols-1)))*regularizationParameter/(2.0*InputSize); //Add regularization terms
             Theta_grad[i] /= InputSize;
-            Theta_grad[i] += join_horiz(zeros<mat>(m_Theta[i].n_rows,1), (regularizationParameter/InputSize)*m_Theta[i].cols(1,m_Theta[i].n_cols-1)); //Add regularization terms
+            Theta_grad[i] += join_horiz(zeros<fmat>(m_Theta[i].n_rows,1), (regularizationParameter/InputSize)*m_Theta[i].cols(1,m_Theta[i].n_cols-1)); //Add regularization terms
         }
-        cout<<"\t\tCost (regularized) = "<<cost<<endl;
+        //cout<<"\t\tCost (regularized) = "<<cost<<endl;
         trainSetCostsReg.push_back(cost);
 
         return Theta_grad;
@@ -420,6 +422,7 @@ namespace IntelliDetect{
         double regularizationParameter = 0, learningRate = 0, momentumConstant = 0;
         int Total = m_Inputs.n_rows;
         int IterCnt = 0, batch_size = Total/100;
+        int numEpochs = 1;
         //Get hyperParameters from property tree
         if(properties.isSet(Property::hyperParameters::regularizationParameter))
             regularizationParameter = stod(properties.getProperty(Property::hyperParameters::regularizationParameter));
@@ -440,36 +443,40 @@ namespace IntelliDetect{
         }
         if(properties.isSet(Property::hyperParameters::batchSize))
             batch_size = stoi(properties.getProperty(Property::hyperParameters::batchSize));
-
+        if(properties.isSet(Property::hyperParameters::numEpochs))
+            numEpochs = stoi(properties.getProperty(Property::hyperParameters::numEpochs));
 
         cout<<"\n\tStarting batch training.\n\n";
 
         cout<<"Prediction Accuracy before training: "<<accuracy(m_Inputs, m_Lables)<<endl<<endl;
         double acc;
-        vector<mat> Theta_grad_prev(m_Theta.capacity());     //To handle momentum
-        for(int k = 0;k<Total/batch_size; ++k){
-            mat Input_batch = m_Inputs.rows(batch_size*(k),batch_size*(k+1)-1);
-            mat Label_batch = m_Lables.rows(batch_size*(k),batch_size*(k+1)-1);
+        vector<fmat> Theta_grad_prev(m_Theta.capacity());     //To handle momentum
+        for(int epoch=0;epoch<numEpochs;++epoch){
+            cout<<"Epoch "<<epoch+1<<endl;
+            for(int batchNo = 0;batchNo<Total/batch_size; ++batchNo){
+                fmat Input_batch = m_Inputs.rows(batch_size*(batchNo),batch_size*(batchNo+1)-1);
+                fmat Label_batch = m_Lables.rows(batch_size*(batchNo),batch_size*(batchNo+1)-1);
 
-            for(unsigned i=0;i<m_Theta.capacity();++i)
-                Theta_grad_prev[i] = zeros<mat>(size(m_Theta[i]));
+                for(unsigned i=0;i<m_Theta.capacity();++i)
+                    Theta_grad_prev[i] = zeros<fmat>(size(m_Theta[i]));
 
 
-            cout<<"Batch "<<k+1<<endl;
-            for(int i=0; i<IterCnt; ++i){
-                cout<<"\tIteration "<<i+1<<endl;
+                //cout<<"Batch "<<batchNo+1<<endl;
+                for(int i=0; i<IterCnt; ++i){
+                    //cout<<"\tIteration "<<i+1<<endl;
 
-                vector<mat> Theta_grad = backpropogate(Input_batch, Label_batch, regularizationParameter);
+                    vector<fmat> Theta_grad = backpropogate(Input_batch, Label_batch, regularizationParameter);
 
-                for(unsigned i=0;i<m_Theta.capacity();++i){
-                    Theta_grad[i] += momentumConstant*Theta_grad_prev[i];
-                    m_Theta[i] -= learningRate*Theta_grad[i];
-                    Theta_grad_prev[i] = Theta_grad[i];
+                    for(unsigned i=0;i<m_Theta.capacity();++i){
+                        Theta_grad[i] += momentumConstant*Theta_grad_prev[i];
+                        m_Theta[i] -= learningRate*Theta_grad[i];
+                        Theta_grad_prev[i] = Theta_grad[i];
+                    }
                 }
             }
+            acc = accuracy(m_Inputs, m_Lables);
+            cout<<"Prediction Accuracy on training set: "<<acc<<endl;
         }
-        acc = accuracy(m_Inputs, m_Lables);
-        cout<<"Prediction Accuracy on training set: "<<acc<<endl;
         if(m_inpPaths.size()-1){
             if(load(m_inpPaths.at(m_inpPaths.size()-1))==true){
                 cout<<"\n\nUsing test set"<<endl;
@@ -502,26 +509,26 @@ namespace IntelliDetect{
 
         cout<<"\n\tStarting individual training.\n\n";
 
-        mat Input = zeros(28,28);
-        mat Label = zeros(1,1);
+        fmat Input = zeros<fmat>(28,28);
+        fmat Label = zeros<fmat>(1,1);
         Input.load(input);
         Input.reshape(1,784);
         Label.at(0) = label;
         cout<<"Overall Prediction Accuracy before training: "<<accuracy(Input, Label)<<endl<<endl;
-        vector<mat> Theta_grad_prev(m_Theta.capacity());     //To handle momentum
+        vector<fmat> Theta_grad_prev(m_Theta.capacity());     //To handle momentum
         for(unsigned i=0;i<m_Theta.capacity();++i)
-            Theta_grad_prev[i] = zeros<mat>(size(m_Theta[i]));
+            Theta_grad_prev[i] = zeros<fmat>(size(m_Theta[i]));
         int i=0;
         while(1){
             cout<<"\tIteration "<<++i<<endl;
-            vector<mat> Theta_grad = backpropogate(Input, Label, regularizationParameter);
+            vector<fmat> Theta_grad = backpropogate(Input, Label, regularizationParameter);
             for(unsigned i=0;i<m_Theta.capacity();++i){
                 Theta_grad[i] += momentumConstant*Theta_grad_prev[i];
                 m_Theta[i] -= learningRate*Theta_grad[i];
                 Theta_grad_prev[i] = Theta_grad[i];
             }
-            mat out = predict(Input);
-            mat conf = output(Input);
+            fmat out = predict(Input);
+            fmat conf = output(Input);
             cout<<"out.at(0) = "<<out.at(0)<<endl<<"confidence = "<<conf(0)<<endl;
             if(out.at(0) == label && conf(0)>0.5)
                 break;
@@ -532,7 +539,7 @@ namespace IntelliDetect{
         save(m_paramPath);
     }
 
-    double network::accuracy(mat &X, mat &Y){
+    double network::accuracy(fmat &X, fmat &Y){
         umat prediction = (predict(X)==Y);
         return as_scalar(accu(prediction)*100.0/prediction.n_elem);
     }
@@ -541,27 +548,27 @@ namespace IntelliDetect{
         return m_paramPath;
     }
 
-    mat im2col(cube image, cube &kernel, int strideLen = 2){
-        mat output = zeros<mat>(kernel.n_cols*kernel.n_rows*image.n_slices,0);
+    fmat im2col(fcube image, fcube &kernel, int strideLen = 2){
+        fmat output = zeros<fmat>(kernel.n_cols*kernel.n_rows*image.n_slices,0);
         int i=0;
         for(int j=0;(j+1)*kernel.n_rows<image.n_rows;++j){
-            for(int k=0;(k+1)*kernel.n_cols<image.n_cols;++k)
+            for(int k=0;(k+strideLen)*kernel.n_cols<image.n_cols;++k)
                 output = join_horiz(output, vectorise(image.subcube(j*kernel.n_rows,k*kernel.n_cols,0,
-                                                    (j+1)*kernel.n_rows-1, (k+1)*kernel.n_cols-1, image.n_slices-1)));
+                                                    (j+strideLen)*kernel.n_rows-1, (k+strideLen)*kernel.n_cols-1, image.n_slices-1)));
         }
         return output;
     }
 
-    mat generateKernelMatrix(vector<cube> kernel){
-        mat kernelMat(kernel[0].n_cols*kernel[0].n_rows*kernel[0].n_slices,kernel.size());
+    fmat generateKernelMatrix(vector<fcube> kernel){
+        fmat kernelMat(kernel[0].n_cols*kernel[0].n_rows*kernel[0].n_slices,kernel.size());
         for(unsigned i=0;i<kernel.size();++i){
             kernelMat.col(i) = vectorise(kernel[i]);
         }
         return kernelMat;
     }
 
-    cube randWeights(int Lin, int Lout, int depth){
-        cube weights(Lin,Lout,depth);
+    fcube randWeights(int Lin, int Lout, int depth){
+        fcube weights(Lin,Lout,depth);
         for(int i=0;i<depth;++i)
             weights.slice(i) = randWeights(Lin,Lout);
         return weights;
@@ -569,15 +576,15 @@ namespace IntelliDetect{
 
     class ConvNet: public network{
             int m_NoOfConvLayers, m_strideLn;
-            vector<cube> m_kernels;
-            vector<mat> m_convLayerWeights;
-            mat forwardPassConvLayers(cube);
-            vector<mat> forwardPass(cube);
+            vector<fcube> m_kernels;
+            vector<fmat> m_convLayerWeights;
+            fmat forwardPassConvLayers(fcube);
+            vector<fmat> forwardPass(fcube);
         public:
             ConvNet(propertyTree);
-            vector<mat> backpropogate(mat, mat, double);
-            mat predict(mat);
-            mat output(mat);
+            vector<fmat> backpropogate(fmat, fmat, double);
+            fmat predict(fmat);
+            fmat output(fmat);
     };
 
     ConvNet::ConvNet(propertyTree properties):network(properties){
@@ -589,16 +596,16 @@ namespace IntelliDetect{
         m_Theta.push_back(generateKernelMatrix(m_kernels));
     }
 
-    cube conv(cube img, vector<mat> kernels){
-        cube output  = zeros<cube>(img.n_rows,img.n_cols,kernels.size());//*img.n_slices);
+    fcube conv(fcube img, vector<fmat> kernels){
+        fcube output  = zeros<fcube>(img.n_rows,img.n_cols,kernels.size());//*img.n_slices);
         for(unsigned int i=0;i<img.n_slices;++i)
             for(unsigned int j=0;j<output.n_slices;++j)
                 output.slice(j+i)= conv2(img.slice(i),kernels[i],"same");
         return output;
     }
 
-    cube pool(cube layer, int receptiveField){
-        cube output = zeros<cube>(layer.n_rows/receptiveField,layer.n_cols/receptiveField,layer.n_slices);
+    fcube pool(fcube layer, int receptiveField){
+        fcube output = zeros<fcube>(layer.n_rows/receptiveField,layer.n_cols/receptiveField,layer.n_slices);
         for(unsigned int i=0;i<layer.n_slices;++i){
             for(unsigned int j=0;(j+1)*receptiveField<output.n_rows;++j)
                 for(unsigned int k=0;(k+1)*receptiveField<output.n_cols;++k)
@@ -611,43 +618,43 @@ namespace IntelliDetect{
         return output;
     }
 
-    mat ConvNet::forwardPassConvLayers(cube img){
+    fmat ConvNet::forwardPassConvLayers(fcube img){
         cout<<"running ConvNet::forwardPass"<<endl;
-        mat convLayer = im2col(img,m_kernels[0]);
-        mat activated = RectifiedLinearUnitActivation(convLayer.t()*m_Theta.back());
+        fmat convLayer = im2col(img,m_kernels[0]);
+        fmat activated = RectifiedLinearUnitActivation(convLayer.t()*m_Theta.back());
         //cube pooledLayer = pool(activated,2);
         return activated;
     }
 
-    vector<mat> ConvNet::forwardPass(cube img){
-        mat pooledLayer = forwardPassConvLayers(img);
-        mat input = pooledLayer;
+    vector<fmat> ConvNet::forwardPass(fcube img){
+        fmat pooledLayer = forwardPassConvLayers(img);
+        fmat input = pooledLayer;
         return network::forwardPass(input);
     }
 
-    mat ConvNet::predict(mat Input){
+    fmat ConvNet::predict(fmat Input){
         Input.reshape(28,28);
-        cube input(Input.n_rows,Input.n_cols,1);
+        fcube input(Input.n_rows,Input.n_cols,1);
         input.slice(0) = Input;
-        vector<mat> layers = forwardPass(input);
+        vector<fmat> layers = forwardPass(input);
         int InputSize = input.n_slices;
-        mat pred = zeros(InputSize,1);
+        fmat pred = zeros<fmat>(InputSize,1);
         for(int i=0; i<InputSize; ++i){
             pred(i) = layers.back().row(i).index_max();
         }
         return pred;
     }
 
-    mat ConvNet::output(mat Input){
+    fmat ConvNet::output(fmat Input){
         cout<<"running ConvNet::output"<<endl;
         int InputSize = Input.n_rows;
         Input.reshape(28,28);
-        cube input(Input.n_rows,Input.n_cols,1);
+        fcube input(Input.n_rows,Input.n_cols,1);
         input.slice(0) = Input;
-        vector<mat> layers = forwardPass(input);
+        vector<fmat> layers = forwardPass(input);
         cout<<"Output: "<<layers.back()<<endl;
         cout<<"Sum of outputs"<<accu(layers.back())<<endl;
-        mat pred = zeros(InputSize,1);
+        fmat pred = zeros<fmat>(InputSize,1);
         for(int i=0; i<InputSize; ++i){
             pred(i) = layers.back().row(i).max();
         }

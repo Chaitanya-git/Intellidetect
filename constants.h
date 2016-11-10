@@ -19,6 +19,7 @@ namespace Property {
         const string momentumConstant = "hyperParameters.momentumConstant";
         const string iterCount = "hyperParameters.iterCount";
         const string batchSize = "hyperParameters.batchSize";
+        const string numEpochs = "hyperParameters.numEpochs";
     }
 }
 
