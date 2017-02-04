@@ -27,8 +27,6 @@
 #include <sys/stat.h>
 #include <proptree.h>
 #include <stdexcept>
-#include <thread>
-#include <future>
 #define INTELLI_VERSION "2.2.2"
 
 /* This header file contains definitions for functions for handling various ANN processes */
@@ -107,7 +105,7 @@ namespace IntelliDetect{
             virtual fmat output(fmat);
             vector<fmat> backpropogate(fmat, fmat, double);
             fmat numericalGradient(fmat);
-            void train(int);
+            void train();
             void train(string, int);
             bool load(vector<string>, int, int);
             bool load(string, int, int);
@@ -424,7 +422,7 @@ namespace IntelliDetect{
                 Theta_grad[i] += delta[i]*act[i-1];
             output_tmp(as_scalar(Outputs(i)),0) = 0;
         }
-        cout<<"\tCost(unregularized) = "<<cost;
+        //cout<<"\tCost(unregularized) = "<<cost;
         trainSetCosts.push_back(cost);
 
         for(unsigned i=0;i<m_Theta.capacity();++i){
@@ -432,13 +430,13 @@ namespace IntelliDetect{
             Theta_grad[i] /= InputSize;
             Theta_grad[i] += join_horiz(zeros<fmat>(m_Theta[i].n_rows,1), (regularizationParameter/InputSize)*m_Theta[i].cols(1,m_Theta[i].n_cols-1)); //Add regularization terms
         }
-        cout<<"\t\tCost (regularized) = "<<cost<<endl;
+        //cout<<"\t\tCost (regularized) = "<<cost<<endl;
         trainSetCostsReg.push_back(cost);
 
         return Theta_grad;
     }
 
-    void network::train(int threadCount){
+    void network::train(){
         double regularizationParameter = 0, learningRate = 0, momentumConstant = 0;
         int Total = m_Inputs.n_rows;
         int IterCnt = 0, batch_size = Total/100;
@@ -474,12 +472,9 @@ namespace IntelliDetect{
         for(int epoch=0;epoch<numEpochs;++epoch){
             cout<<"Epoch "<<epoch+1<<endl;
             for(int batchNo = 0;batchNo<Total/batch_size; ++batchNo){
-                fmat Input_batch[threadCount];
-                fmat Label_batch[threadCount];
-                for(int i=0;i<threadCount;++i,++batchNo){
-                    fmat Input_batch[0] = m_Inputs.rows(batch_size*(batchNo),batch_size*(batchNo+1)-1);
-                    fmat Label_batch[0] = m_Lables.rows(batch_size*(batchNo),batch_size*(batchNo+1)-1);
-                }
+                fmat Input_batch = m_Inputs.rows(batch_size*(batchNo),batch_size*(batchNo+1)-1);
+                fmat Label_batch = m_Lables.rows(batch_size*(batchNo),batch_size*(batchNo+1)-1);
+
                 for(unsigned i=0;i<m_Theta.capacity();++i)
                     Theta_grad_prev[i] = zeros<fmat>(size(m_Theta[i]));
 
@@ -488,18 +483,12 @@ namespace IntelliDetect{
                 for(int i=0; i<IterCnt; ++i){
                     //cout<<"\tIteration "<<i+1<<endl;
 
-                    future<vector<fmat>> thr[threadCount];
-                    for(int i=0;i<threadCount;++i)
-                        thr[i] = async(launch::async, bind(&network::backpropogate, this, Input_batch[i], Label_batch[i], regularizationParameter));
+                    vector<fmat> Theta_grad = backpropogate(Input_batch, Label_batch, regularizationParameter);
 
-                    for(int j=0;j<threadCount;++j){
-                        thr[j].wait();
-                        vector<fmat> Theta_grad = thr[j].get();
-                        for(unsigned i=0;i<m_Theta.capacity();++i){
-                            Theta_grad[i] += momentumConstant*Theta_grad_prev[i];
-                            m_Theta[i] -= learningRate*Theta_grad[i];
-                            Theta_grad_prev[i] = Theta_grad[i];
-                        }
+                    for(unsigned i=0;i<m_Theta.capacity();++i){
+                        Theta_grad[i] += momentumConstant*Theta_grad_prev[i];
+                        m_Theta[i] -= learningRate*Theta_grad[i];
+                        Theta_grad_prev[i] = Theta_grad[i];
                     }
                 }
             }
@@ -579,6 +568,7 @@ namespace IntelliDetect{
 
     fmat im2col(fcube image, fcube &kernel, int strideLen = 2){
         fmat output = zeros<fmat>(kernel.n_cols*kernel.n_rows*image.n_slices,0);
+        int i=0;
         for(int j=0;(j+1)*kernel.n_rows<image.n_rows;++j){
             for(int k=0;(k+strideLen)*kernel.n_cols<image.n_cols;++k)
                 output = join_horiz(output, vectorise(image.subcube(j*kernel.n_rows,k*kernel.n_cols,0,

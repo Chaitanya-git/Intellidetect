@@ -21,7 +21,6 @@
 #include "QFileDialog"
 #include <QtCharts>
 #include <QInputDialog>
-#include <QtConcurrent>
 #include <IntelliDetect.h>
 #include <armadillo>
 
@@ -96,18 +95,15 @@ void MainWindow::on_actionTrain_from_file_triggered()
             net = new network(prop);
         }
         net->load(fileNames);
-        int NumThreads = QInputDialog::getInt(this,tr("Enter Number of epochs"),tr("Number: "),0,0);
-        net->train(NumThreads);
+        net->train();
     }
 }
 
 void MainWindow::on_actionTrain_for_current_input_triggered()
 {
     string fileStr = fileName.toUtf8().constData();
-    int Label = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),-1,0,9);
-    if(Label>-1)
-        QFuture<void> result = QtConcurrent::run(net, &network::train, fileStr, Label);
-
+    int Label = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),0,0,9);
+    net->train(fileStr, Label);
 }
 
 void MainWindow::on_actionLoad_network_from_file_triggered()
