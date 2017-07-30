@@ -1,8 +1,27 @@
+/*
+ * Copyright (C) 2017 Chaitanya and Geeve George
+ * This file is part of Intellidetect.
+ *
+ *  Intellidetect is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Intellidetect is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with Intellidetect.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "QFileDialog"
 #include <QtCharts>
 #include <QInputDialog>
+#include <QtConcurrent>
 #include <IntelliDetect.h>
 #include <armadillo>
 
@@ -77,15 +96,18 @@ void MainWindow::on_actionTrain_from_file_triggered()
             net = new network(prop);
         }
         net->load(fileNames);
-        net->train();
+        int NumThreads = QInputDialog::getInt(this,tr("Enter Number of epochs"),tr("Number: "),0,0);
+        net->train(NumThreads);
     }
 }
 
 void MainWindow::on_actionTrain_for_current_input_triggered()
 {
     string fileStr = fileName.toUtf8().constData();
-    int Label = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),0,0,9);
-    net->train(fileStr, Label);
+    int Label = QInputDialog::getInt(this,tr("Enter Label"),tr("Digit Label: "),-1,0,9);
+    if(Label>-1)
+        QFuture<void> result = QtConcurrent::run(net, &network::train, fileStr, Label);
+
 }
 
 void MainWindow::on_actionLoad_network_from_file_triggered()
